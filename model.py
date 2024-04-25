@@ -31,11 +31,14 @@ rf = rf.drop(rf.index[:552])
 
 ### Identify features (with either antecedent proxies or soil moisture levels)
 days = 6
-features = ['Rain'] + ['Rain-' + f'{d+1}' for d in range(days)] + \
-            ['Temperature'] + ['Temperature-' + f'{d+1}' for d in range(days)] + \
-            ['Resultant Windspeed'] + ['Resultant Windspeed-' + f'{d+1}' for d in range(days)] + \
-            ['Humidity'] + ['Humidity-' + f'{d+1}' for d in range(days)] + \
-            ['Mu-r28','Mu-r3M','Mu-r6M','Mu-t28','Mu-t3M','Mu-t6M']
+features = ['Rain'] + ['Rain-' + f'{d+1}' for d in range(days)] \
+            + ['Temperature'] \
+            + ['Temperature-' + f'{d+1}' for d in range(days)] \
+            + ['Resultant Windspeed'] \
+            + ['Resultant Windspeed-' + f'{d+1}' for d in range(days)] \
+            + ['Humidity'] + ['Humidity-' + f'{d+1}' for d in range(days)] \
+            + ['Rain_28_Mu','Rain_90_Mu','Rain_180_Mu',
+               'Temperature_28_Mu','Temperature_90_Mu','Temperature_180_Mu']
             # ['Soil Moisture ' + f'{i+1}' for i in range(4)]
 targets = ['Flow']
 xspace = ma.featurelocator(rf, features)

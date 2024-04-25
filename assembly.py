@@ -16,7 +16,7 @@ from apollo import hydropoint as hp
 
 ### Specify meteorological variables and spatiotemporal ranges
 area = ['60.00/-8.00/48.00/4.00']
-yyyy = [str(y) for y in range(1979,2021,1)]
+yyyy = [str(y) for y in range(1979,2022,1)]
 mm = [str(m) for m in range(1,13,1)]
 dd = [str(d) for d in range(1,32,1)]
 hh = [str(t).zfill(2) + ':00' for t in range(0, 24, 1)]
