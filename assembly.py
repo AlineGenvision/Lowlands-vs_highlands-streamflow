@@ -7,6 +7,7 @@ data handling functions from the apollo library.
 """
 
 # Import cdsapi and create a Client instance
+import os
 import xarray as xr
 import pandas as pd
 from apollo import era5 as er
@@ -28,16 +29,34 @@ met = ['total_precipitation','temperature','u_component_of_wind',
 ### Download meteorological variable sets from Copernicus Data Store
 for yy in yyyy:
     filename = 'Rainfall_' + str(yy)
-    rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[0],
+
+    if not os.path.exists(filename + '.nc'):
+        rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[0],
                           area, yy, mm, dd, hh)
-    rain_data = er.era5(rain_query).download()
-    er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
-                      str(rain_query['file_stem']) + '_aggregated.nc')
-full_rain_data = xr.open_mfdataset('Rainfall_*_aggregated.nc', concat_dim='time')
+        rain_data = er.era5(rain_query).download()
+        er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
+                        str(rain_query['file_stem']) + '_aggregated.nc')
+    else:
+        print(filename, "already exists.")
+full_rain_data = xr.open_mfdataset('Rainfall_*_aggregated.nc', concat_dim='time', combine='nested')
 full_rain_data.to_netcdf(path='Rainfall.nc')
-pressure_query = er.query('Pressure','reanalysis-era5-pressure-levels',
-                          met[1:5], area, yyyy, mm, dd, '12:00', ['1000'])
-pressure_data = er.era5(pressure_query).download()
+
+for yy in yyyy:
+    filename = 'Pressure_' + str(yy)
+
+    if not os.path.exists(filename + '.nc'):
+        print("downloading ", filename)
+        pressure_query = er.query(filename, 'reanalysis-era5-pressure-levels', met[1:5],
+                          area, yy, mm, dd, '12:00', ['1000'])
+        pressure_data = er.era5(pressure_query).download()
+
+full_pressure_data = xr.open_mfdataset('Rainfall_*.nc', concat_dim='time', combine='nested')
+full_pressure_data.to_netcdf(path='Pressure.nc')
+
+#pressure_query = er.query('Pressure','reanalysis-era5-pressure-levels',
+#                          met[1:5], area, yyyy, mm, dd, '12:00', ['1000'])
+#pressure_data = er.era5(pressure_query).download()
+
 soil_query = er.query('Soil_Moisture','reanalysis-era5-land', met[5:],
                       area, yyyy, mm, dd, '12:00')
 soil_data = er.era5(soil_query).download()
