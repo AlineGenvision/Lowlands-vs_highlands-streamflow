@@ -8,6 +8,7 @@ data handling functions from the apollo library.
 
 # Import cdsapi and create a Client instance
 import os
+import paths
 import xarray as xr
 import pandas as pd
 from apollo import era5 as er
@@ -28,45 +29,62 @@ met = ['total_precipitation','temperature','u_component_of_wind',
 
 ### Download meteorological variable sets from Copernicus Data Store
 for yy in yyyy:
-    filename = 'Rainfall_' + str(yy)
+    filename = paths.WEATHER_UK + '/Rainfall_' + str(yy)
 
     if not os.path.exists(filename + '.nc'):
+        print('downloading ', filename)
         rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[0],
                           area, yy, mm, dd, hh)
         rain_data = er.era5(rain_query).download()
         er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
                         str(rain_query['file_stem']) + '_aggregated.nc')
-    else:
-        print(filename, "already exists.")
-full_rain_data = xr.open_mfdataset('Rainfall_*_aggregated.nc', concat_dim='time', combine='nested')
-full_rain_data.to_netcdf(path='Rainfall.nc')
+
+full_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall_*_aggregated.nc', concat_dim='time', combine='nested')
+if not os.path.exists(paths.RAINFALL_UK):
+    full_rain_data.to_netcdf(path=paths.RAINFALL_UK)
 
 for yy in yyyy:
-    filename = 'Pressure_' + str(yy)
+    filename = paths.WEATHER_UK + '/Pressure_' + str(yy)
 
-    if not os.path.exists(filename + '.nc'):
+    if not os.path.exists(filename + '1000hPa.nc'):
         print("downloading ", filename)
         pressure_query = er.query(filename, 'reanalysis-era5-pressure-levels', met[1:5],
                           area, yy, mm, dd, '12:00', ['1000'])
         pressure_data = er.era5(pressure_query).download()
 
-full_pressure_data = xr.open_mfdataset('Rainfall_*.nc', concat_dim='time', combine='nested')
-full_pressure_data.to_netcdf(path='Pressure.nc')
+full_pressure_data = xr.open_mfdataset(paths.WEATHER_UK + '/Pressure_*.nc', concat_dim='time', combine='nested')
+if not os.path.exists(paths.PRESSURE_UK):
+    full_pressure_data.to_netcdf(path=paths.PRESSURE_UK)
+
+for yy in yyyy:
+    filename = paths.SURFACE_UK + '/Soil_Moisture_' + str(yy)
+
+    if not os.path.exists(filename + '.nc'):
+        print("downloading ", filename)
+        soil_moisture_query = er.query(filename, 'reanalysis-era5-land', met[5:], area, yy, mm, dd, '12:00')
+        soil_moisture_data = er.era5(soil_moisture_query).download()
+
+full_soil_moisture_data = xr.open_mfdataset(paths.SURFACE_UK + '/Soil_Moisture_*.nc', concat_dim='time', combine='nested')
+if not os.path.exists(paths.SOIL_MOISTURE_UK):
+    full_soil_moisture_data.to_netcdf(path=paths.SOIL_MOISTURE_UK)
 
 #pressure_query = er.query('Pressure','reanalysis-era5-pressure-levels',
 #                          met[1:5], area, yyyy, mm, dd, '12:00', ['1000'])
 #pressure_data = er.era5(pressure_query).download()
 
-soil_query = er.query('Soil_Moisture','reanalysis-era5-land', met[5:],
-                      area, yyyy, mm, dd, '12:00')
-soil_data = er.era5(soil_query).download()
+#soil_query = er.query('Soil_Moisture','reanalysis-era5-land', met[5:],
+#                      area, yyyy, mm, dd, '12:00')
+#soil_data = er.era5(soil_query).download()
 
 
 ### Produce lumped regression files per catchment
-domain_weather = xr.open_mfdataset(['Rainfall.nc',
-                                    'Pressure.nc'])
-surface_data = xr.open_dataset('Soil_Moisture.nc')
-db = pd.read_csv('Catchment_Database.csv')
+domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
+                                    paths.PRESSURE_UK])
+surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
+db = pd.read_csv(paths.DATA + '/Catchment_Database.csv')
 for i in range(len(db)):
-    test = hp.hydrobase(db.loc[i][0], db.loc[i][3], db.loc[i][4])
-    cache = test.output_file(domain_weather, surface_data, 28)
+    db_path = paths.CATCHMENT_BASINS + '/' + str(db.loc[i][0])
+    test = hp.hydrobase(db.loc[i][0],
+                        db_path + '/' + db.loc[i][3],
+                        db_path + '/' + db.loc[i][4])
+    cache = test.output_file(domain_weather, surface_data, 28, out_fp=paths.CATCHMENT_BASINS)
