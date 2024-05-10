@@ -81,7 +81,7 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
 domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
-db = pd.read_csv(paths.DATA + '/Catchment_Database.csv')
+db = pd.read_csv(paths.DATA + '/Catchments_Fens.csv')
 for i in range(len(db)):
     db_path = paths.CATCHMENT_BASINS + '/' + str(db.loc[i][0])
     test = hp.hydrobase(db.loc[i][0],

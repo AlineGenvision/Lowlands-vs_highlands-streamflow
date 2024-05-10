@@ -1,0 +1,17 @@
+Station number,River,Location,Flow File,Boundary File,Area,Minimum altitude,10 percentile,50 percentile,90 percentile,Maximum altitude,Woodland,Arable / horticultural,Grassland,Mountain / Heath / Bog,Urban extent,High permeability bedrock,Moderate permeability bedrock,Very low permeability bedrock,Mixed permeability bedrock,FARL,CF-Natural,CF-Storage,CF-Regulated,CF-Effluent,CF-Abstraction33035,Ely Ouse,Denver Complex,33035_gdf.csv,33035.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+39016,Kennet,Theale,39016_gdf.csv,39016.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+5004,x,y,5004_gdf.csv,5004.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+18002,x3,y3,18002_gdf.csv,18002.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+72016,x4,y4,72016_gdf.csv,72016.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+95002,x4,y4,95002_gdf.csv,95002.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+5003,x5,y5,5003_gdf.csv,5003.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+54008,x5,y5,54008_gdf.csv,54008.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+39008,x6,y6,39008_gdf.csv,39008.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+8002,x7,y7,8002_gdf.csv,8002.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+9004,x7,y7,9004_gdf.csv,9004.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+12003,x7,y7,12003_gdf.csv,12003.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+28085,x7,y7,28085_gdf.csv,28085.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+34004,x7,y7,34004_gdf.csv,34004.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+28067,x7,y7,28067_gdf.csv,28067.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+45009,x7,y7,45009_gdf.csv,45009.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+53018,x7,y7,53018_gdf.csv,53018.shp,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
