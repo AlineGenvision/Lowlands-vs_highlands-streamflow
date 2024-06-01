@@ -6,6 +6,8 @@ import geopandas as gp
 
 from apollo import mechanics as ma
 from torch.autograd import Variable
+from sklearn.preprocessing import StandardScaler
+
 
 ### Set global model parameters
 torch.manual_seed(42)
@@ -26,6 +28,7 @@ def load_data(filename, verbose=True):
     rf = pd.read_csv(filename)
     rf['Date'] = pd.to_datetime(rf['Date'], format='%Y-%m-%d').dt.date
     len_before = len(rf)
+    rf = rf.drop(rf.index[:395])
     rf = rf.dropna(subset=['Flow'])
 
     if verbose is True:
@@ -35,16 +38,30 @@ def load_data(filename, verbose=True):
     return rf
 
 
-def preprocess_data(rf, features, years_training):
+def preprocess_data(rf, features, years_evaluation, years_training=None):
 
     ###Test/Train data split by years
-    rftrain = rf[~pd.to_datetime(rf['Date']).dt.year.isin(years_training)]
+    if years_training is not None:
+        rftrain = rf[pd.to_datetime(rf['Date']).dt.year.isin(years_training)]
+    else:
+        rftrain = rf[~pd.to_datetime(rf['Date']).dt.year.isin(years_evaluation)]
 
     ### Normalise features using parameters cached from the training set
+
     norm_cache = {}
     for f in features:
         rftrain[f] = ma.normalise(rftrain, f, norm_cache, write_cache=True)
         rf[f] = ma.normalise(rf, f, norm_cache, write_cache=False)
+
+
+    '''
+    print('using a different normalizer')
+    scaler = StandardScaler()
+
+    # Fit the scaler on the training data and transform both train and test data
+    rftrain[features] = scaler.fit_transform(rftrain[features])
+    rf[features] = scaler.transform(rf[features])
+    '''
 
     rftrain['Date'] = rftrain['Date'].apply(
         lambda x: datetime.datetime.combine(x, datetime.datetime.min.time()).timestamp())
@@ -64,22 +81,3 @@ def reshape_input(set, xspace):
 def reshape_output(set, yspace):
     Y = set[:, yspace].reshape(len(set), 1).astype(float)
     return Y #torch.from_numpy(Y).to(device)
-
-
-
-def process_station(station_nr, features=FEATURE_LIST):
-
-    input_data_fp = paths.CATCHMENT_BASINS + '/' + str(station_nr) + '/' + str(str(station_nr) + '_lumped.csv')
-
-    rf = load_data(input_data_fp)
-    trnset, full_set = preprocess_data(rf, features, [2010 + i for i in range(12)])
-
-    targets = ['Flow']
-    xspace = ma.featurelocator(rf, features)
-    yspace = ma.featurelocator(rf, targets)
-
-    x_train, y_train = get_train_data(trnset, xspace, yspace)
-    y_test = get_test_data(full_set, xspace)
-
-
-    #print(boundary.geometry.area/1000)
