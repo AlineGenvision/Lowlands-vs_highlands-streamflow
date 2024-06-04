@@ -8,6 +8,7 @@ data handling functions from the apollo library.
 
 # Import cdsapi and create a Client instance
 import os
+import glob
 import paths
 import xarray as xr
 import pandas as pd
@@ -21,24 +22,28 @@ yyyy = [str(y) for y in range(1979,2022,1)]
 mm = [str(m) for m in range(1,13,1)]
 dd = [str(d) for d in range(1,32,1)]
 hh = [str(t).zfill(2) + ':00' for t in range(0, 24, 1)]
-met = ['total_precipitation','temperature','u_component_of_wind',
+met = ['total_precipitation','snowmelt', 'temperature','u_component_of_wind',
        'v_component_of_wind','relative_humidity',
        'volumetric_soil_water_layer_1','volumetric_soil_water_layer_2',
-       'volumetric_soil_water_layer_3','volumetric_soil_water_layer_4', 'snowmelt']
+       'volumetric_soil_water_layer_3','volumetric_soil_water_layer_4']
 
 
 ### Download meteorological variable sets from Copernicus Data Store
-for yy in yyyy:
-    filename = paths.WEATHER_UK + '/Rainfall/Rainfall_' + str(yy)
-    rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[0],
-                          area, yy, mm, dd, hh)
 
-    # Save the hourly precipitation data and aggregate daily (from midnight to midnight)
-    if not os.path.exists(filename + '.nc'):
+## Download Rainfall, including snow melt separately (midnight to midnight and shifted daily from 9 to 9)
+for yy in yyyy:
+
+    filename = paths.WEATHER_UK + '/Rainfall/Rainfall_' + str(yy)
+    rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[:2],
+                                  area, yy, mm, dd, hh)
+
+    if not os.path.exists(filename + '.nc') and int(yy) > 1999:
+
         print('downloading ', filename)
         rain_data = er.era5(rain_query).download()
 
-    er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
+        # Save the hourly precipitation data and aggregate daily (from midnight to midnight)
+        er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
                       str(rain_query['file_stem']) + '_aggregated.nc')
 
     # Shift the daily aggregation (from 9am to 9am)
@@ -51,22 +56,35 @@ for yy in yyyy:
                           str(rain_query['file_stem']) + '_aggregated_9to9.nc',
                           shift=9)
 
+# Combine the daily midnight-midnight precipitation
 if not os.path.exists(paths.RAINFALL_UK):
     full_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall/Rainfall_*_aggregated.nc', concat_dim='time',
                                        combine='nested')
     full_rain_data.to_netcdf(path=paths.RAINFALL_UK)
 
+# Combine the daily 9 to 9 precipiptation
 if not os.path.exists(paths.RAINFALL_UK_SHIFTED):
     full_shifted_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall/Rainfall_*_aggregated_9to9.nc',
                                                concat_dim='time', combine='nested')
     full_shifted_rain_data.to_netcdf(path=paths.RAINFALL_UK_SHIFTED)
 
+# Hourly precipitation for the 9 to 9 shift
+if not os.path.exists(paths.RAINFALL_HOURLY_UK_SHIFTED):
+    all_files = glob.glob(paths.WEATHER_UK + '/Rainfall/Rainfall_*_9to9.nc')
+    filtered_files = [f for f in all_files if 'aggregated' not in f]
+
+    full_rain_data = xr.open_mfdataset(filtered_files, concat_dim='time', combine='nested')
+    if not os.path.exists(paths.RAINFALL_HOURLY_UK_SHIFTED):
+        full_rain_data.to_netcdf(path=paths.RAINFALL_HOURLY_UK_SHIFTED)
+
+
+## Download Pressure data (converted to windspeed and humidity later)
 for yy in yyyy:
     filename = paths.WEATHER_UK + '/Pressure/Pressure_' + str(yy)
 
     if not os.path.exists(filename + '1000hPa.nc'):
         print("downloading ", filename)
-        pressure_query = er.query(filename, 'reanalysis-era5-pressure-levels', met[1:5],
+        pressure_query = er.query(filename, 'reanalysis-era5-pressure-levels', met[2:6],
                           area, yy, mm, dd, '12:00', ['1000'])
         pressure_data = er.era5(pressure_query).download()
 
@@ -74,13 +92,13 @@ full_pressure_data = xr.open_mfdataset(paths.WEATHER_UK + '/Pressure/Pressure_*.
 if not os.path.exists(paths.PRESSURE_UK):
     full_pressure_data.to_netcdf(path=paths.PRESSURE_UK)
 
-
+## Download Soil Moisture data (4 different soil layers)
 for yy in yyyy:
     filename = paths.SURFACE_UK + '/Soil_Moisture_' + str(yy)
 
     if not os.path.exists(filename + '.nc'):
         print("downloading ", filename)
-        soil_moisture_query = er.query(filename, 'reanalysis-era5-land', met[5:-1], area, yy, mm, dd, '12:00')
+        soil_moisture_query = er.query(filename, 'reanalysis-era5-land', met[6:], area, yy, mm, dd, '12:00')
         soil_moisture_data = er.era5(soil_moisture_query).download()
 
 full_soil_moisture_data = xr.open_mfdataset(paths.SURFACE_UK + '/Soil_Moisture_*.nc', concat_dim='time', combine='nested')
@@ -88,26 +106,12 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
     full_soil_moisture_data.to_netcdf(path=paths.SOIL_MOISTURE_UK)
 
 
-for yy in yyyy:
-    filename = paths.WEATHER_UK + '/Snowmelt/Snowmelt_' + str(yy)
-
-    if not os.path.exists(filename + '.nc'):
-        print("downloading ", filename)
-        snowmelt_query = er.query(filename, 'reanalysis-era5-land', met[-1:], area, yy, mm, dd, '12:00')
-        snowmelt_data = er.era5(snowmelt_query).download()
-
-full_snowmelt_data = xr.open_mfdataset(paths.WEATHER_UK + '/Snowmelt/Snowmelt_*.nc', concat_dim='time', combine='nested')
-if not os.path.exists(paths.SNOWMELT_UK):
-    full_snowmelt_data.to_netcdf(path=paths.SNOWMELT_UK)
-
-
 ### Produce lumped regression files per catchment
-domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
+domain_weather = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
-snow_data = xr.open_dataset(paths.SNOWMELT_UK)
-domain_rain = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK])
-db = pd.read_csv(paths.DATA + '/Catchments_Fens.csv')
+domain_rain = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK_SHIFTED])
+db = pd.read_csv(paths.DATA + '/Catchment_Database.csv')
 for i in range(len(db)):
     print('start with ', i)
 
@@ -116,5 +120,10 @@ for i in range(len(db)):
     test = hp.hydrobase(db.loc[i][0],
                         db_path + '/' + db.loc[i][3],
                         db_path + '/' + db.loc[i][4])
-    cache = test.output_file(domain_weather, surface_data, snow_data,28, out_fp=paths.CATCHMENT_BASINS)
-    #more_cache = test.output_hourly_rain_file(domain_rain, 24, out_fp=paths.CATCHMENT_BASINS)
+    '''
+    cache = test.output_file(domain_weather, surface_data, 28,
+                             out_fp=paths.CATCHMENT_BASINS,
+                             ext='_9to9',
+                             interpolation_method='linear')
+                             '''
+    more_cache = test.output_hourly_rain_file(domain_rain, 24, out_fp=paths.CATCHMENT_BASINS)
