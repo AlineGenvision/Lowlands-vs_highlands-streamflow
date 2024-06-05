@@ -28,7 +28,7 @@ def load_data(filename, verbose=True):
     rf = pd.read_csv(filename)
     rf['Date'] = pd.to_datetime(rf['Date'], format='%Y-%m-%d').dt.date
     len_before = len(rf)
-    rf = rf.drop(rf.index[:395])
+    rf = rf.drop(rf.index[:552])
     rf = rf.dropna(subset=['Flow'])
 
     if verbose is True:

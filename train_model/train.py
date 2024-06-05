@@ -23,9 +23,9 @@ class AntecedentNET(nn.Module):
         self.linear_layers = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
             nn.SiLU(),
-            #nn.Dropout(self.dropout),
+            nn.Dropout(self.dropout),
             nn.Linear(hidden_dim, int(hidden_dim/4)),
-            #nn.Dropout(self.dropout),
+            nn.Dropout(self.dropout),
             nn.SiLU(),
             nn.Linear(int(hidden_dim/4), 1),
         )
@@ -102,9 +102,9 @@ def fit(net, x, y, loss_func, loss_func_type, optimizer, verbose, psi):
 class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
     def __init__(self,
                  input_size=10,
-                 hidden_size=128,
+                 hidden_size=64,
                  output_size=1,
-                 dropout_rate=0.5,
+                 dropout_rate=0.8,
                  learning_rate=0.001,
                  weight_decay=0.2,
                  num_epochs=9000,

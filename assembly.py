@@ -12,6 +12,7 @@ import glob
 import paths
 import xarray as xr
 import pandas as pd
+import numpy as np
 from apollo import era5 as er
 from apollo import hydropoint as hp
 
@@ -37,8 +38,7 @@ for yy in yyyy:
     rain_query = er.query(filename, 'reanalysis-era5-single-levels', met[:2],
                                   area, yy, mm, dd, hh)
 
-    if not os.path.exists(filename + '.nc') and int(yy) > 1999:
-
+    if not os.path.exists(filename + '.nc'):
         print('downloading ', filename)
         rain_data = er.era5(rain_query).download()
 
@@ -107,11 +107,11 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
 
 
 ### Produce lumped regression files per catchment
-domain_weather = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED,
+domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
 domain_rain = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK_SHIFTED])
-db = pd.read_csv(paths.DATA + '/Catchment_Database.csv')
+db = pd.read_csv(paths.DATA + '/Catchments_Fens.csv')
 for i in range(len(db)):
     print('start with ', i)
 
@@ -120,10 +120,19 @@ for i in range(len(db)):
     test = hp.hydrobase(db.loc[i][0],
                         db_path + '/' + db.loc[i][3],
                         db_path + '/' + db.loc[i][4])
-    '''
+
+    domain_weather= domain_weather.astype(np.float32)
+    surface_data = surface_data.astype(np.float32)
+
     cache = test.output_file(domain_weather, surface_data, 28,
                              out_fp=paths.CATCHMENT_BASINS,
-                             ext='_9to9',
+                             ext='',
                              interpolation_method='linear')
-                             '''
-    more_cache = test.output_hourly_rain_file(domain_rain, 24, out_fp=paths.CATCHMENT_BASINS)
+
+    '''
+    more_cache = test.output_hourly_rain_file(domain_rain,
+                                              hours_shift=0,
+                                              out_fp=paths.CATCHMENT_BASINS,
+                                              ext='',
+                                              interpolation_method='linear')
+                                              '''
