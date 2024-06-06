@@ -1,0 +1,4 @@
+Station number,River,Location,Flow File,Boundary File,Area,Minimum altitude,10 percentile,50 percentile,90 percentile,Maximum altitude,Woodland,Arable / horticultural,Grassland,Mountain / Heath / Bog,Urban extent,High permeability bedrock,Moderate permeability bedrock,Very low permeability bedrock,Mixed permeability bedrock,FARL,CF-Natural,CF-Storage,CF-Regulated,CF-Effluent,CF-Abstraction
+54057,Severn,Haw Bridge,54057_gdf.csv,54057.shp,9895,7.4,49.00,110.00,303.50,826.20,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+33039,Bedford Ouse,Roxton,33039_gdf.csv,33039.shp,1660,4.70,46.40,96.50,137.30,247.30,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
+7001,Findhorn,Shenachie,7001_gdf.csv,7001.shp,415.6,251.30,339.98,559.70,761.00,935.30,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-
