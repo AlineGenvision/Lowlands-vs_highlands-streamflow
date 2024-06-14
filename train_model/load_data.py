@@ -28,7 +28,7 @@ def load_data(filename, verbose=True):
     rf = pd.read_csv(filename)
     rf['Date'] = pd.to_datetime(rf['Date'], format='%Y-%m-%d').dt.date
     len_before = len(rf)
-    rf = rf.drop(rf.index[:552])
+    rf = rf.drop(rf.index[:30]) #:552
     rf = rf.dropna(subset=['Flow'])
 
     if verbose is True:
@@ -52,7 +52,6 @@ def preprocess_data(rf, features, years_evaluation, years_training=None):
     for f in features:
         rftrain[f] = ma.normalise(rftrain, f, norm_cache, write_cache=True)
         rf[f] = ma.normalise(rf, f, norm_cache, write_cache=False)
-
 
     '''
     print('using a different normalizer')
