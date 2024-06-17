@@ -15,7 +15,8 @@ import pandas as pd
 import numpy as np
 from apollo import era5 as er
 from apollo import hydropoint as hp
-
+from apollo import mechanics as ma
+from train_model import load_data
 
 ### Specify meteorological variables and spatiotemporal ranges
 area = ['60.00/-8.00/48.00/4.00']
@@ -106,6 +107,37 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
     full_soil_moisture_data.to_netcdf(path=paths.SOIL_MOISTURE_UK)
 
 
+def process_nrfa_file(station_nr, ext):
+
+    print('processing nrfa', station_nr)
+
+    # Load the necessary files
+    reference_path = paths.CATCHMENT_BASINS + '/' + str(station_nr) + '/' + str(str(station_nr) + '_lumped_9to9_linear.csv')
+    nrfa_path = paths.CATCHMENT_BASINS + f'/{station_nr}/{station_nr}_cdr.csv'
+    out_path = paths.CATCHMENT_BASINS + f'/{str(station_nr)}/{str(station_nr)}_lumped{ext}_nrfa.csv'
+
+    # Load original file with temperature, soil moisture ..
+    rain_columns = (['Rain'] + ['Rain-' + f'{d + 1}' for d in range(27)] + ['Rain_28_Mu', 'Rain_90_Mu', 'Rain_180_Mu'])
+    rf_ref = load_data.load_data(reference_path, verbose=False).drop(columns=rain_columns)
+
+    # Load and format the NRFA precipitation data
+    rf_nrfa = pd.read_csv(nrfa_path)
+    rf_nrfa = rf_nrfa.drop(rf_nrfa.columns[2], axis=1)
+    rf_nrfa = rf_nrfa.drop(rf_nrfa.index[0:19])
+    rf_nrfa.columns = ['Date', 'Rain']
+    rf_nrfa['Date'] = pd.to_datetime(rf_nrfa['Date'], format='%Y-%m-%d').dt.date
+    rf_nrfa['Rain'] = rf_nrfa['Rain'].astype('float64')
+
+    # Shift the data by 28 days for each day of rain + get the proxies
+    rf_nrfa = hp.weather_shift(rf_nrfa, 'Rain', 28)
+    for window in [28, 90, 180]:
+        ma.stat_roller(rf_nrfa, 'Rain', window, method='mean')
+
+    # Combine with the original data
+    outdf = pd.merge(rf_ref, rf_nrfa, how='inner', on='Date')
+    outdf.to_csv(out_path, index=True)
+
+
 ### Produce lumped regression files per catchment
 domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
                                     paths.PRESSURE_UK])
@@ -115,6 +147,7 @@ db = pd.read_csv(paths.DATA + '/Catchments_Fens.csv')
 for i in range(len(db)):
     print('start with ', i)
 
+    '''
     db_path = paths.CATCHMENT_BASINS + '/' + str(db.loc[i][0])
 
     test = hp.hydrobase(db.loc[i][0],
@@ -128,6 +161,9 @@ for i in range(len(db)):
                              out_fp=paths.CATCHMENT_BASINS,
                              ext='',
                              interpolation_method='linear')
+                            '''
+
+    process_nrfa_file(db.loc[i][0], ext='_9to9')
 
     '''
     more_cache = test.output_hourly_rain_file(domain_rain,
