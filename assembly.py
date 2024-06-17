@@ -139,15 +139,18 @@ def process_nrfa_file(station_nr, ext):
 
 
 ### Produce lumped regression files per catchment
-domain_weather = xr.open_mfdataset([paths.RAINFALL_UK,
+domain_weather = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
 domain_rain = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK_SHIFTED])
 db = pd.read_csv(paths.DATA + '/Catchments_Fens.csv')
+
+EXT = '_9to9'
+
 for i in range(len(db)):
     print('start with ', i)
 
-    '''
+
     db_path = paths.CATCHMENT_BASINS + '/' + str(db.loc[i][0])
 
     test = hp.hydrobase(db.loc[i][0],
@@ -157,13 +160,28 @@ for i in range(len(db)):
     domain_weather= domain_weather.astype(np.float32)
     surface_data = surface_data.astype(np.float32)
 
-    cache = test.output_file(domain_weather, surface_data, 28,
-                             out_fp=paths.CATCHMENT_BASINS,
-                             ext='',
-                             interpolation_method='linear')
-                            '''
+    cache = test.output_era5_file(domain_weather, surface_data, 28,
+                                out_fp=paths.CATCHMENT_BASINS,
+                                ext=EXT,
+                                interpolation_method='linear')
 
-    process_nrfa_file(db.loc[i][0], ext='_9to9')
+    # Use era5 files as reference to alterate the precipitation with both NRFA and surface interpolated values
+    rain_columns = (['Rain'] + ['Rain-' + f'{d + 1}' for d in range(27)] +
+                    ['Rain_28_Mu', 'Rain_90_Mu', 'Rain_180_Mu'])
+    ref_path = (paths.CATCHMENT_BASINS + '/' + str(db.loc[i][0]) + '/' +
+               str(db.loc[i][0]) + f"_lumped{EXT}_linear.csv")
+    rf_ref = load_data.load_data(ref_path, verbose=False).drop(columns=rain_columns)
+
+    rf_nrfa = pd.read_csv(paths.CATCHMENT_BASINS + f'/{str(db.loc[i][0])}/{str(db.loc[i][0])}_cdr.csv')
+    nrfa_cache = test.output_nrfa_file(rf_ref=rf_ref,
+                                       rf_nrfa=rf_nrfa,
+                                       out_fp=paths.CATCHMENT_BASINS,
+                                       ext=EXT)
+
+    surf_interp_cache = test.output_surface_interpolated_file(domain_rain=domain_weather,
+                                                              rf_ref=rf_ref,
+                                                              out_fp=paths.CATCHMENT_BASINS,
+                                                              ext=EXT)
 
     '''
     more_cache = test.output_hourly_rain_file(domain_rain,

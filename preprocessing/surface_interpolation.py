@@ -36,7 +36,7 @@ def round_to_nearest(value, max=True, base=0.25, buffer=1):
         return np.floor(value / base) * base - buffer*base
 
 
-def extract_raster_to_interpolate(catchment_path, resolution):
+def extract_raster_to_interpolate(catchment_boundary, resolution):
     '''
         Return the nearest value in terms of the data resolution.
 
@@ -52,7 +52,7 @@ def extract_raster_to_interpolate(catchment_path, resolution):
         The four corners of the bounding box of the given shape, with a certain buffer around and in lat-lon coordinates.
 
         '''
-    minx, miny, maxx, maxy = gpd.read_file(catchment_path).total_bounds
+    minx, miny, maxx, maxy = catchment_boundary.total_bounds
 
     lat_min, lon_min = osg.BNG_2_latlon(minx, miny)
     lat_max, lon_max = osg.BNG_2_latlon(maxx, maxy)
@@ -173,7 +173,7 @@ def convert_polygon(polygon, conversion_func):
     return Polygon(new_coords)
 
 
-def integrate_rainfall_over_polygon_new(polygon, interp_func, resolution=0.05):
+def integrate_rainfall_over_polygon_new(polygon, interp_func, grid_resolution=0.05):
     '''
     Integrates interpolated rainfall values over a given polygon. This polygon is first convert to lat-lon coordinates.
     This function approximates the integration by evaluating the interpolation function over a grid within the polygon,
