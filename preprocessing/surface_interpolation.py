@@ -1,4 +1,5 @@
 import scipy
+import folium
 import numpy as np
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -36,7 +37,7 @@ def round_to_nearest(value, max=True, base=0.25, buffer=1):
         return np.floor(value / base) * base - buffer*base
 
 
-def extract_raster_to_interpolate(catchment_boundary, resolution):
+def extract_raster_to_interpolate(catchment_boundary, resolution, buffer=1):
     '''
         Return the nearest value in terms of the data resolution.
 
@@ -57,10 +58,10 @@ def extract_raster_to_interpolate(catchment_boundary, resolution):
     lat_min, lon_min = osg.BNG_2_latlon(minx, miny)
     lat_max, lon_max = osg.BNG_2_latlon(maxx, maxy)
 
-    lat_min = round_to_nearest(lat_min, max=False, base=resolution)
-    lon_min = round_to_nearest(lon_min, max=False, base=resolution)
-    lat_max = round_to_nearest(lat_max, base=resolution)
-    lon_max = round_to_nearest(lon_max, base=resolution)
+    lat_min = round_to_nearest(lat_min, max=False, base=resolution, buffer=buffer)
+    lon_min = round_to_nearest(lon_min, max=False, base=resolution, buffer=buffer)
+    lat_max = round_to_nearest(lat_max, base=resolution, buffer=buffer)
+    lon_max = round_to_nearest(lon_max, base=resolution, buffer=buffer)
 
     return lat_min, lat_max, lon_min, lon_max
 
@@ -173,7 +174,36 @@ def convert_polygon(polygon, conversion_func):
     return Polygon(new_coords)
 
 
-def integrate_rainfall_over_polygon_new(polygon, interp_func, grid_resolution=0.05):
+# TODO : Cleanup function
+def plot_integration(polygon, grid_resolution=0.05):
+    latlon_polygon = convert_polygon(polygon.geometry.iloc[0], osg.BNG_2_latlon)
+    lat_min, lon_min, lat_max, lon_max = latlon_polygon.bounds
+    x = np.arange(lat_min, lat_max, grid_resolution)
+    y = np.arange(lon_min, lon_max, grid_resolution)
+    grid_x, grid_y = np.meshgrid(x, y)
+
+    all_points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T
+
+    prepared_polygon = prep(latlon_polygon)
+    mask = np.array([prepared_polygon.contains(Point(p)) for p in all_points])
+    inside_points = all_points[mask]
+
+    points = polygon.centroid
+    lat, lon = osg.BNG_2_latlon(points.x[0], points.y[0])
+    m = folium.Map(location=[lat, lon], zoom_start=8)
+    layer = folium.GeoJson(polygon.to_crs("EPSG:4326"), name='catchment').add_to(m)
+
+    for point in all_points:
+        folium.CircleMarker(location=[point[0], point[1]], color='green', radius=0.5).add_to(m)
+
+    for point in inside_points:
+        folium.CircleMarker(location=[point[0], point[1]], color='red', radius=0.5).add_to(m)
+
+    folium.LayerControl().add_to(m)
+    return m
+
+
+def integrate_rainfall_over_polygon(polygon, interp_func, grid_resolution=0.05):
     '''
     Integrates interpolated rainfall values over a given polygon. This polygon is first convert to lat-lon coordinates.
     This function approximates the integration by evaluating the interpolation function over a grid within the polygon,
@@ -197,8 +227,8 @@ def integrate_rainfall_over_polygon_new(polygon, interp_func, grid_resolution=0.
 
     latlon_polygon = convert_polygon(polygon.geometry.iloc[0], osg.BNG_2_latlon)
     lat_min, lon_min, lat_max, lon_max = latlon_polygon.bounds
-    x = np.arange(lat_min, lat_max, resolution)
-    y = np.arange(lon_min, lon_max, resolution)
+    x = np.arange(lat_min, lat_max, grid_resolution)
+    y = np.arange(lon_min, lon_max, grid_resolution)
     grid_x, grid_y = np.meshgrid(x, y)
 
     points = np.vstack([grid_x.ravel(), grid_y.ravel()]).T

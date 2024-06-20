@@ -11,3 +11,7 @@ RAINFALL_HOURLY_UK_SHIFTED = WEATHER_UK + '/Rainfall_9to9_hourly.nc'
 PRESSURE_UK = WEATHER_UK + '/Pressure.nc'
 SOIL_MOISTURE_UK = SURFACE_UK + '/Soil_Moisture.nc'
 SNOWMELT_UK = WEATHER_UK + '/Snowmelt.nc'
+
+PREDICTIONS = DATA + '/predictions'
+
+IMAGES = "C:/Users/aline/Documents/Cambridge/Mres Project/Report/Images"

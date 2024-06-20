@@ -35,6 +35,8 @@ def load_data(filename, verbose=True):
         print(len_before - len(rf), 'values are missing.')
         print('Mean flow is ', rf['Flow'].mean(), '+-', rf['Flow'].std())
         print('Maximum flow is ', rf['Flow'].max())
+
+    rf.reset_index(drop=True, inplace=True)
     return rf
 
 
@@ -47,11 +49,10 @@ def preprocess_data(rf, features, years_evaluation, years_training=None):
         rftrain = rf[~pd.to_datetime(rf['Date']).dt.year.isin(years_evaluation)]
 
     ### Normalise features using parameters cached from the training set
-
     norm_cache = {}
     for f in features:
-        rftrain[f] = ma.normalise(rftrain, f, norm_cache, write_cache=True)
-        rf[f] = ma.normalise(rf, f, norm_cache, write_cache=False)
+        rftrain.loc[:, f] = ma.normalise(rftrain, f, norm_cache, write_cache=True)
+        rf.loc[:, f] = ma.normalise(rf, f, norm_cache, write_cache=False)
 
     '''
     print('using a different normalizer')
@@ -62,9 +63,10 @@ def preprocess_data(rf, features, years_evaluation, years_training=None):
     rf[features] = scaler.transform(rf[features])
     '''
 
-    rftrain['Date'] = rftrain['Date'].apply(
+    rftrain.loc[:, 'Date'] = rftrain['Date'].apply(
         lambda x: datetime.datetime.combine(x, datetime.datetime.min.time()).timestamp())
-    rf['Date'] = rf['Date'].apply(lambda x: datetime.datetime.combine(x, datetime.datetime.min.time()).timestamp())
+    rf.loc[:, 'Date'] = rf['Date'].apply(
+        lambda x: datetime.datetime.combine(x, datetime.datetime.min.time()).timestamp())
 
     ### Convert dataframe subsets to arrays and then to PyTorch variables
     trnset = rftrain.to_numpy()

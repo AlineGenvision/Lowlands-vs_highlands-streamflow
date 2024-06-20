@@ -1,8 +1,11 @@
 import torch
 import numpy as np
+import pandas as pd
+import utils as ut
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from apollo import metrics as me
+from apollo import streamflow as strf
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.model_selection import GridSearchCV, train_test_split
 
@@ -110,6 +113,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
                  num_epochs=9000,
                  criterion=nn.MSELoss(),
                  patience=10,
+                 early_stopping=True,
                  verbose=True):
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -123,14 +127,15 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.patience = patience
         self.verbose = verbose
+        self.early_stopping = early_stopping
 
-    def fit(self, X_extended, y, validation=True):
+    def fit(self, X_extended, y):
 
         loss_list = []
         val_loss_list = []
         self.model.train()
 
-        if validation is True:
+        if self.early_stopping is True:
             X_train, X_val, y_train, y_val = train_test_split(X_extended, y, test_size=0.2, random_state=42)
 
             X_val_data = X_val[:, :-1]
@@ -165,7 +170,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
             if epoch % 500 == 0 and self.verbose:
                 print(f'epoch {epoch}, loss {loss.item()}')
 
-            if validation is True:
+            if self.early_stopping is True:
                 self.model.eval()
                 with torch.no_grad():
                     val_outputs = self.model(X_val_data)
@@ -187,7 +192,8 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
                         print(f'Early stopping at epoch {epoch}, best validation loss: {best_val_loss}')
                     break
 
-        self.plot_loss(loss_list, val_loss_list)
+        if self.verbose:
+            self.plot_loss(loss_list, val_loss_list)
 
     def predict(self, X_extended):
         self.model.eval()
@@ -198,7 +204,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         else:
             X = X_extended[:, :-1]
 
-        X_tensor = torch.tensor(X, dtype=torch.float32)
+        X_tensor = torch.tensor(X, dtype=torch.float32).clone().detach()
         with torch.no_grad():
             predictions = self.model(X_tensor).numpy()
         return predictions
@@ -215,7 +221,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         plt.show()
 
 
-def train(x, y, verbose=True, loss_func_type=None, psi=None, grid_search=True):
+def train(x, y, verbose=True, loss_func_type=None, psi=None, grid_search=True, early_stopping=True):
 
     if loss_func_type == 'Reflective':
         loss_func = RELoss()
@@ -260,3 +266,21 @@ def evaluate(net, y):
     ### Evaluate Network
     net = net.eval()
     return net(y.float()).data.cpu().numpy()
+
+
+def calculate_performance_metrics(outdf, years_to_consider, plot=True):
+
+    maxflow = int(0.8 * max(np.array(outdf['Flow'])))
+
+    df = outdf[outdf['Date'].dt.year.isin(years_to_consider)]
+
+    psi_RE_df = pd.DataFrame(ut.psi_distribution(outdf['Groundtruth'], 'lognorm'), columns=['psi'])
+    psi_RE_df['Date'] = outdf['Date']
+    psi_RE = psi_RE_df[psi_RE_df['Date'].dt.year.isin(years_to_consider)]['psi'].squeeze()
+
+    if plot is True:
+        strf.scatter_plot(maxflow, df, 'Predicted', 'Flow')
+    RMSE = me.RMSE(df['Flow'], df['Predicted'])
+    NSE = me.R2(df['Flow'], df['Predicted'])
+    RE = me.RE(df['Flow'], df['Predicted'], psi_RE)
+    return {'RMSE': RMSE, 'NSE': NSE, 'RE': RE}

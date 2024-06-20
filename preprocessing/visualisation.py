@@ -1,10 +1,12 @@
 import folium
+import pandas as pd
 import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdt
 import matplotlib.ticker as mtk
 
 from apollo import osgconv as osg
+from preprocessing import surface_interpolation as si
 
 
 def plot_spatial_distribution(domain_data, catchment_polygon, date=(1979 ,1 ,1), value_column='Rain', resolution=0.25,
@@ -90,29 +92,70 @@ def plot_spatial_distribution(domain_data, catchment_polygon, date=(1979 ,1 ,1),
     return m
 
 
-def compare_precipitation_and_flow(dfs_precipitation, colors, labels, df_flow, year):
+def plot_centroid_interpolation(catchment_boundary, df_data, resolution):
 
-    fig, ax1 = plt.subplots(figsize=(16, 8))
+    points = catchment_boundary.centroid
+    lat, lon = osg.BNG_2_latlon(points.x[0], points.y[0])
+    lat_raster = si.round_to_nearest(lat, base=resolution, buffer=0)
+    lon_raster = si.round_to_nearest(lon, max=False, base=resolution, buffer=0)
+
+    m = folium.Map(location=[lat, lon], zoom_start=8)
+    folium.TileLayer('CartoDB Positron No Labels').add_to(m)
+    folium.Marker([lat, lon], popup='Centroid').add_to(m)
+
+    gdf = catchment_boundary.to_crs("EPSG:4326")
+    layer = folium.GeoJson(gdf, name='catchment', color='steelblue', opacity='0.95').add_to(m)
+
+    for _, row in df_data.iterrows():
+        lat, lon = row['latitude'], row['longitude']
+        folium.Rectangle(
+            bounds=[(lat, lon), (lat - resolution, lon + resolution)],
+            color='lightgray',
+            fill=False,
+        ).add_to(m)
+
+    folium.Rectangle(
+        bounds=[(lat_raster, lon_raster), (lat_raster - resolution, lon_raster + resolution)],
+        color='orangered',
+        fill=False,
+        fill_opacity=0.2,
+    ).add_to(m)
+
+    folium.LayerControl().add_to(m)
+    return m
+
+
+def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, df_separate=None, label_separate=None,
+                                   save_path=None):
+
+    fig, ax1 = plt.subplots(figsize=(16, 5))
     ax1.set_xlim([dt.date(year, 1, 1), dt.date(year, 12, 31)])
     ax1.set_xlabel('Date')
 
     ax1.xaxis.set_major_locator(mdt.MonthLocator())
     ax1.xaxis.set_major_formatter(mdt.DateFormatter('%b'))
-    ax1.set_ylim(0, 0.8*max(df['Rain'].max() for df in dfs_precipitation))
+    ax1.set_ylim(0, 1.1*max([df[df['Date'].dt.year == year]['Rain'].max() for df in dfs_precipitation]))
     ax1.set_ylabel('Precipitation (mm)')
     ax1.yaxis.set_major_locator(mtk.MaxNLocator(5))
 
     ax1.grid(c='black', ls='dotted', lw=0.5)
 
     for i, df in enumerate(dfs_precipitation):
-        ax1.plot(df['Date'], df['Rain'], colors[i], lw=2.5, ls='-', label=f"precipitation_{labels[i]}")
+        ax1.plot(df['Date'], df['Rain'], colors[i], lw=2.0, ls='-', label=f"precipitation_{labels[i]}")
 
-    ax2 = ax1.twinx()
-    ax2.set_ylabel('Flow (m'+r'$^3$'+'s'+r'$^{-1}$'+')')
-    ax2.set_ylim(4 * df_flow['Flow'].max(),0)
+    if df_separate is not None:
 
-    #ax2.plot(rf_9to9['Date'],rf_9to9['Snow Melt']*2, 'green', lw=2.5, ls='-', label='precipitation 9h to 9h')
-    ax2.plot(df_flow['Date'], df_flow['Flow'], 'black', lw=2.8, ls='-', label='Flow')
+        if label_separate is None:
+            label_separate = 'Flow'
 
-    ax1.legend(loc=0, bbox_to_anchor=(0.25,0.8))
+        ax2 = ax1.twinx()
+        ax2.set_ylabel(f"{label_separate} (m'+r'$^3$'+'s'+r'$^{-1}$'+')")
+        ax2.set_ylim(df_separate[label_separate].max(),0)
+
+        #ax2.plot(rf_9to9['Date'],rf_9to9['Snow Melt']*2, 'green', lw=2.5, ls='-', label='precipitation 9h to 9h')
+        ax2.plot(df_separate['Date'], df_separate[label_separate], 'black', lw=1.5, ls='-', label=label_separate)
+
+    ax1.legend(loc='upper left')
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
