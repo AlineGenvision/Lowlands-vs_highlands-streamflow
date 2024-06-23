@@ -1,3 +1,4 @@
+import pandas as pd
 import scipy
 import folium
 import numpy as np
@@ -112,7 +113,7 @@ def fill_non_finite_values(data):
         return data
 
 
-def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=False):
+def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True, save_path=None):
     '''
     Interpolates spatial data using RegularGridInterpolator for each time step in the dataset.
 
@@ -137,6 +138,8 @@ def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=Fals
 
     interpolated_functions = {}
 
+    fig, axs = plt.subplots(1, 4, subplot_kw={'projection': '3d'}, figsize=(14, 6))
+
     for i, time in enumerate(times):
 
         data = dataset[var_name].sel(time=time)
@@ -150,9 +153,18 @@ def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=Fals
                                                                      method='linear')
         interpolated_functions[time] = interpolator
 
-        if i < 5 and plot:
-            print(time)
-            plot_interpolation(lats, lons, interpolator)
+        plot_nr = 7998
+        if plot and i >= plot_nr and i < plot_nr+4:
+            ax = axs[i-plot_nr]
+            if i == plot_nr:
+                plot_interpolation(lats, lons, interpolator, ax, title=f"{str(time).split('T')[0]}", labels=True)
+            else:
+                plot_interpolation(lats, lons, interpolator, ax, title=f"{str(time).split('T')[0]}", labels=False)
+
+    plt.subplots_adjust(wspace=0.2)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.show()
     return interpolated_functions
 
 
@@ -178,7 +190,7 @@ def evaluate_interpolator_on_grid(x1_surface, x2_surface, interpolator):
     return interpolator(points).reshape(x1_surface.shape)
 
 
-def plot_interpolation(x1, x2, f):
+def plot_interpolation(x1, x2, f, ax, title, labels=True):
     '''
         Plots the interpolated surface using a 3D plot.
 
@@ -197,12 +209,15 @@ def plot_interpolation(x1, x2, f):
         '''
     x1_surface, x2_surface = np.meshgrid(np.linspace(x1.min(), x1.max(), len(x1)), np.linspace(x2.min(), x2.max(), len(x2)), indexing='ij')
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_surface(x1_surface, x2_surface, evaluate_interpolator_on_grid(x1_surface, x2_surface, f), alpha=0.5)
-    ax.set_xlabel('Latitude')
-    ax.set_ylabel('Longitude')
-    plt.show()
+    ax.plot_surface(x1_surface, x2_surface, evaluate_interpolator_on_grid(x1_surface, x2_surface, f),
+                    color='cadetblue', alpha=0.5)
+    if labels is True:
+        ax.set_xlabel('Latitude')
+        ax.set_ylabel('Longitude')
+    else:
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+    ax.set_title(title, loc='center', pad=-40)
 
 
 def convert_polygon(polygon, conversion_func):

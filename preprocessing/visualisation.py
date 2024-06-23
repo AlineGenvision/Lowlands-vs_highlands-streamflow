@@ -126,9 +126,12 @@ def plot_centroid_interpolation(catchment_boundary, df_data, resolution):
 
 
 def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot_snow=False, df_separate=None,
-                                   label_separate=None, save_path=None):
+                                   label_separate=None, save_path=None, figsize=None):
 
-    fig, ax1 = plt.subplots(figsize=(16, 5))
+    if figsize is None:
+        figsize = (16, 5)
+
+    fig, ax1 = plt.subplots(figsize=figsize)
     ax1.set_xlim([dt.date(year, 1, 1), dt.date(year, 12, 31)])
     ax1.set_xlabel(year)
 
