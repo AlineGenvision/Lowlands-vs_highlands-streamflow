@@ -25,13 +25,16 @@ class AntecedentNET(nn.Module):
         self.dropout = dropout_rate
         self.linear_layers = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
+            #nn.BatchNorm1d(hidden_dim),
             nn.SiLU(),
             nn.Dropout(self.dropout),
             nn.Linear(hidden_dim, int(hidden_dim/4)),
-            nn.Dropout(self.dropout),
+            #nn.BatchNorm1d(int(hidden_dim/4)),
             nn.SiLU(),
+            nn.Dropout(self.dropout),
             nn.Linear(int(hidden_dim/4), 1),
         )
+
 
     def forward(self, z):
         z = self.linear_layers(z)
@@ -107,7 +110,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
                  input_size=10,
                  hidden_size=64,
                  output_size=1,
-                 dropout_rate=0.8,
+                 dropout_rate=0,
                  learning_rate=0.001,
                  weight_decay=0.2,
                  num_epochs=9000,
@@ -122,7 +125,8 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.num_epochs = num_epochs
-        self.model = load_network(input_size, output_size, hidden_dim=hidden_size,  dropout_rate=dropout_rate).to(device)
+        self.model = load_network(input_size, output_size, hidden_dim=hidden_size,
+                                  dropout_rate=dropout_rate).to(device)
         self.criterion = criterion
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.patience = patience
@@ -136,7 +140,7 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         self.model.train()
 
         if self.early_stopping is True:
-            X_train, X_val, y_train, y_val = train_test_split(X_extended, y, test_size=0.2, random_state=42)
+            X_train, X_val, y_train, y_val = train_test_split(X_extended, y, test_size=0.1, random_state=42)
 
             X_val_data = X_val[:, :-1]
             psi_val = X_val[:, -1:]
@@ -221,14 +225,15 @@ class NeuralNetworkRegressor(BaseEstimator, RegressorMixin):
         plt.show()
 
 
-def train(x, y, verbose=True, loss_func_type=None, psi=None, grid_search=True, early_stopping=True):
+def train(x, y, verbose=True, loss_func_type=None, psi=None, grid_search=True, early_stopping=True, network_params={}):
 
     if loss_func_type == 'Reflective':
         loss_func = RELoss()
     else:
         loss_func = torch.nn.MSELoss()
 
-    model = NeuralNetworkRegressor(input_size=x.shape[1], output_size=y.shape[1], criterion=loss_func, verbose=verbose)
+    model = NeuralNetworkRegressor(input_size=x.shape[1], output_size=y.shape[1], criterion=loss_func, verbose=verbose,
+                                   **network_params)
 
     if grid_search is True:
         print('using grid search')

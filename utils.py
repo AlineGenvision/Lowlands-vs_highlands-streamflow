@@ -1,4 +1,5 @@
 import numpy as np
+from fitter import Fitter
 import scipy.stats as sc
 import matplotlib.pyplot as plt
 
@@ -25,13 +26,19 @@ def plot_distribution(y_train, u_of_y, psi, kappa):
     plt.show()
 
 
-def psi_distribution(y_train, mode, alpha=1, beta=1, plot=False):
+def psi_distribution(y_train, mode=None, alpha=1, beta=1, plot=False):
+
+    if mode is None:
+        f = Fitter(y_train, distributions=['lognorm', 'gamma'])
+        f.fit()
+        best_fit = f.get_best(method='sumsquare_error')
+        mode = list(best_fit.keys())[0]
+
     if mode == 'lognorm':
 
         shape, loc, scale = sc.lognorm.fit(y_train, loc=0)
 
         # KAPPA (max U(y)) calculation for LOGNORM
-        ##suggested function kappa = np.exp(-2*(shape**2)) * (loc*np.exp(2*(shape**2))+scale)
         kappa_max_x = loc + scale * np.exp(- shape ** 2)
         kappa_max_y = sc.lognorm.pdf(kappa_max_x, s=shape, scale=scale, loc=loc)
         # ALTERNATIVE

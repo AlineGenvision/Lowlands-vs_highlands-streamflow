@@ -15,7 +15,6 @@ import pandas as pd
 import numpy as np
 from apollo import era5 as er
 from apollo import hydropoint as hp
-from apollo import mechanics as ma
 from train_model import load_data
 
 ### Specify meteorological variables and spatiotemporal ranges
@@ -79,6 +78,57 @@ if not os.path.exists(paths.RAINFALL_HOURLY_UK_SHIFTED):
         full_rain_data.to_netcdf(path=paths.RAINFALL_HOURLY_UK_SHIFTED)
 
 
+## Download Rainfall and snowmelt from ERA5-land (higher resolution)
+for yy in yyyy:
+
+    filename = paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_' + str(yy)
+    rain_query = er.query(filename, 'reanalysis-era5-land', met[:2], area, yy, mm, dd, hh)
+
+    for m in mm:
+        filename_month = paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_' + str(yy) + '_' + str(m)
+        rain_query_month = er.query(filename_month, 'reanalysis-era5-land', met[:2],
+                                    area, yy, m, dd, hh)
+
+        if not os.path.exists(filename_month + '.nc'):
+            print('downloading ', filename_month)
+            rain_data = er.era5(rain_query_month).download()
+
+    if not os.path.exists(filename + '.nc'):
+        rain_data = xr.open_mfdataset(paths.WEATHER_UK + f"/Rainfall_0.1/Rainfall_{str(yy)}*.nc",
+                                      concat_dim='time', combine='nested')
+        rain_data = rain_data.sortby('time')
+        rain_data.to_netcdf(path=(filename + '.nc'))
+
+    # Save the hourly precipitation data and aggregate daily (from midnight to midnight)
+    if not os.path.exists(str(rain_query['file_stem']) + '_aggregated.nc'):
+        er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
+                          str(rain_query['file_stem']) + '_aggregated.nc')
+
+    # Shift the daily aggregation (from 9am to 9am)
+    if not os.path.exists(filename + '_aggregated_9to9.nc'):
+        print('shifting', filename)
+        er.shift_time_9am_to_9am(str(rain_query['file_stem']) + '.nc',
+                                 int(yy),
+                                 str(rain_query['file_stem']) + '_9to9.nc')
+        er.aggregate_mean(str(rain_query['file_stem']) + '_9to9.nc',
+                          str(rain_query['file_stem']) + '_aggregated_9to9.nc',
+                          shift=9)
+
+# Combine the daily midnight-midnight precipitation (High Res)
+if not os.path.exists(paths.RAINFALL_UK_HR):
+    full_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_*_aggregated.nc', concat_dim='time',
+                                       combine='nested')
+    full_rain_data = full_rain_data.sortby('latitude', ascending=False)
+    full_rain_data.to_netcdf(path=paths.RAINFALL_UK_HR)
+
+# Combine the daily 9 to 9 precipiptation (High Res)
+if not os.path.exists(paths.RAINFALL_UK_SHIFTED_HR):
+    full_shifted_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_*_aggregated_9to9.nc',
+                                               concat_dim='time', combine='nested')
+    full_shifted_rain_data = full_shifted_rain_data.sortby('latitude', ascending=False)
+    full_shifted_rain_data.to_netcdf(path=paths.RAINFALL_UK_SHIFTED_HR)
+
+
 ## Download Pressure data (converted to windspeed and humidity later)
 for yy in yyyy:
     filename = paths.WEATHER_UK + '/Pressure/Pressure_' + str(yy)
@@ -111,7 +161,12 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
 domain_weather = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
+
 domain_rain = xr.open_dataset(paths.RAINFALL_UK_SHIFTED)
+
+domain_rain_HR = xr.open_mfdataset(paths.RAINFALL_UK_SHIFTED_HR)
+domain_weather_HR = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED_HR,
+                                    paths.PRESSURE_UK])
 domain_rain_hourly = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK_SHIFTED])
 db = pd.read_csv(paths.DATA + '/Catchments_Database.csv')
 
@@ -130,11 +185,20 @@ for i in range(len(db)):
     domain_weather= domain_weather.astype(np.float32)
     surface_data = surface_data.astype(np.float32)
 
+    # Normal Era5 data
     cache = test.output_era5_file(domain_weather, surface_data, 28,
                                 out_fp=OUT_FP,
                                 ext=EXT,
                                 interpolation_method='linear',
                                 reload=False)
+
+    # Hourly precipitation
+    hourly_cache = test.output_hourly_rain_file(domain_rain_hourly,
+                                              hours_shift=9,
+                                              out_fp=paths.CATCHMENT_BASINS,
+                                              ext=EXT,
+                                              interpolation_method='linear',
+                                              reload=False)
 
     # Use era5 files as reference to alterate the precipitation with both NRFA and surface interpolated values
     rain_columns = (['Rain'] + ['Rain-' + f'{d + 1}' for d in range(27)] +
@@ -143,6 +207,7 @@ for i in range(len(db)):
                str(db.iloc[i,0]) + f"_lumped{EXT}_linear.csv")
     rf_ref = load_data.load_data(ref_path, verbose=False).drop(columns=rain_columns)
 
+    # NRFA precipitation
     rf_nrfa = pd.read_csv(paths.CATCHMENT_BASINS + f'/{str(db.iloc[i,0])}/{str(db.iloc[i,0])}_cdr.csv')
     nrfa_cache = test.output_nrfa_file(rf_ref=rf_ref,
                                        rf_nrfa=rf_nrfa,
@@ -150,16 +215,26 @@ for i in range(len(db)):
                                        ext=EXT,
                                        reload=False)
 
+    # Surface interpolation
     surf_interp_cache = test.output_surface_interpolated_file(domain_rain=domain_rain,
                                                               rf_ref=rf_ref,
                                                               out_fp=OUT_FP,
                                                               ext=EXT,
+                                                              multiplicator=1000*24,
                                                               reload=False)
 
-    '''
-    more_cache = test.output_hourly_rain_file(domain_rain_hourly,
-                                              hours_shift=0,
-                                              out_fp=paths.CATCHMENT_BASINS,
-                                              ext='',
-                                              interpolation_method='linear')
-                                              '''
+    # Linear interpolation high resolution data
+    cache_HR = test.output_era5_file(domain_weather_HR, surface_data, 28,
+                                  out_fp=OUT_FP,
+                                  ext=EXT + '_HR',
+                                  interpolation_method='linear',
+                                  reload=False)
+
+    # Surface interpolation high resolution data
+    surf_interp_cache_HR = test.output_surface_interpolated_file(domain_rain=domain_rain_HR,
+                                                              rf_ref=rf_ref,
+                                                              out_fp=OUT_FP,
+                                                              ext=EXT + '_HR',
+                                                              resolution=0.1,
+                                                              multiplicator=100*24,
+                                                              reload=True)

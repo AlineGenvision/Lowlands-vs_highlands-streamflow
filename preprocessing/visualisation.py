@@ -125,12 +125,12 @@ def plot_centroid_interpolation(catchment_boundary, df_data, resolution):
     return m
 
 
-def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, df_separate=None, label_separate=None,
-                                   save_path=None):
+def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot_snow=False, df_separate=None,
+                                   label_separate=None, save_path=None):
 
     fig, ax1 = plt.subplots(figsize=(16, 5))
     ax1.set_xlim([dt.date(year, 1, 1), dt.date(year, 12, 31)])
-    ax1.set_xlabel('Date')
+    ax1.set_xlabel(year)
 
     ax1.xaxis.set_major_locator(mdt.MonthLocator())
     ax1.xaxis.set_major_formatter(mdt.DateFormatter('%b'))
@@ -141,7 +141,11 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, df_s
     ax1.grid(c='black', ls='dotted', lw=0.5)
 
     for i, df in enumerate(dfs_precipitation):
-        ax1.plot(df['Date'], df['Rain'], colors[i], lw=2.0, ls='-', label=f"precipitation_{labels[i]}")
+        ax1.plot(df['Date'], df['Rain'], colors[i], lw=2.0, ls='-', label=f"precipitation {labels[i]}")
+
+    if plot_snow is True:
+        df_snow = dfs_precipitation[0]
+        ax1.plot(df_snow['Date'],df_snow['Snow Melt'], 'orangered', lw=1.5, ls='-', label='snow melt')
 
     if df_separate is not None:
 
@@ -149,13 +153,68 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, df_s
             label_separate = 'Flow'
 
         ax2 = ax1.twinx()
-        ax2.set_ylabel(f"{label_separate} (m'+r'$^3$'+'s'+r'$^{-1}$'+')")
-        ax2.set_ylim(df_separate[label_separate].max(),0)
+        ax2.set_ylabel(f"{label_separate} (m³/s)")
+        ax2.set_ylim(df_separate[label_separate].max()*2,0)
 
-        #ax2.plot(rf_9to9['Date'],rf_9to9['Snow Melt']*2, 'green', lw=2.5, ls='-', label='precipitation 9h to 9h')
-        ax2.plot(df_separate['Date'], df_separate[label_separate], 'black', lw=1.5, ls='-', label=label_separate)
+        ax2.plot(df_separate['Date'], df_separate[label_separate], 'black', lw=1.5, ls='-', label='riverflow')
 
-    ax1.legend(loc='upper left')
+        handles, labels = ax1.get_legend_handles_labels()
+        if df_separate is not None:
+            handles2, labels2 = ax2.get_legend_handles_labels()
+        handles += handles2
+        labels += labels2
+
+        ax1.legend(handles, labels, loc='center left', bbox_to_anchor=(0.0, 0.70))
+    else:
+        ax1.legend(loc='upper left')
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+def plot_hourly_rainfall(df_rain, year, month, days, save_path=None):
+    hours = list(range(24))
+    features_needed = ['Date'] + [f"Rain_-{i + 1}" for i in hours]
+    df_filtered = df_rain[(pd.to_datetime(df_rain['Date']).dt.year == year) &
+                          (pd.to_datetime(df_rain['Date']).dt.month == month)][features_needed]
+
+    # Create a 2x2 grid of subplots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 6))
+    axes = axes.flatten()
+
+    for i, day in enumerate(days):
+        ax = axes[i]
+
+        # Plot the mean
+        mean = df_filtered[day:day + 1][[f"Rain_-{i + 1}" for i in range(24)]].sum(axis=1) / 24
+        mean_value = mean.iloc[0]
+        ax.axhline(y=mean_value, color='black', ls='--', lw='1.5', label='Average Rain')
+
+        # Calculate and plot parameterizations
+        row = df_filtered.iloc[day, 1:]
+        x_max = abs(int(row.idxmax().split('_')[1]) + 1)
+        y_max = row[row.idxmax()]
+        ax.plot([x_max, x_max], [y_max, mean_value], color='orangered', ls='-', lw=1.5, label='Parametrisation peak')
+        ax.plot([x_max, hours[-1]], [mean_value, mean_value], color='orangered', ls='-', lw=1.5)
+
+        # Plot the hourly rainfall values
+        for index, row in df_filtered[day:day + 1].iterrows():
+            ax.plot(hours, row[1:], label=row['Date'], color='Teal')
+
+        ax.set_xlabel(f"24 Hours on {df_filtered.iloc[day]['Date']} [h]")
+        ax.set_ylim(-0.2, 2.5)
+        if i == 0 or i == 2:
+            ax.set_ylabel('Rainfall [mm]')
+        else:
+            ax.set_yticklabels([])
+        if i == len(days) - 1:
+            ax.legend(loc='upper right')
+        ax.grid(True)
+        ax.set_xticks(hours)
+        ax.set_xticklabels([str((i + 9) % 24) for i in range(24)])
+
+    plt.tight_layout()
     if save_path is not None:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()

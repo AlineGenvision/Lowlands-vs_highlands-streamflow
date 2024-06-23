@@ -5,6 +5,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 
 from shapely.geometry import Point, Polygon
+from scipy.interpolate import griddata
 from shapely.prepared import prep
 from apollo import osgconv as osg
 
@@ -66,6 +67,51 @@ def extract_raster_to_interpolate(catchment_boundary, resolution, buffer=1):
     return lat_min, lat_max, lon_min, lon_max
 
 
+def fill_non_finite_values(data):
+    # Convert the input to a numpy array if it isn't already
+    data = np.array(data)
+
+    # Check for non-finite values in the data
+    if not np.all(np.isfinite(data)):
+        data_filled = data.copy()
+
+        # Get indices of finite and non-finite values
+        finite_idx = np.isfinite(data_filled)
+        non_finite_idx = ~finite_idx
+
+        # Get coordinates of finite and non-finite values
+        x_finite, y_finite = np.where(finite_idx)
+        x_non_finite, y_non_finite = np.where(non_finite_idx)
+
+        # Get finite values
+        finite_values = data_filled[finite_idx]
+
+        # Perform interpolation
+        interpolated_values = griddata(
+            (x_finite, y_finite),
+            finite_values,
+            (x_non_finite, y_non_finite),
+            method='linear'
+        )
+
+        # For any remaining NaNs after interpolation, use nearest neighbor
+        remaining_nans = np.isnan(interpolated_values)
+        if np.any(remaining_nans):
+            interpolated_values[remaining_nans] = griddata(
+                (x_finite, y_finite),
+                finite_values,
+                (x_non_finite[remaining_nans], y_non_finite[remaining_nans]),
+                method='nearest'
+            )
+
+        # Fill non-finite values with interpolated values
+        data_filled[non_finite_idx] = interpolated_values
+
+        return data_filled
+    else:
+        return data
+
+
 def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=False):
     '''
     Interpolates spatial data using RegularGridInterpolator for each time step in the dataset.
@@ -94,8 +140,14 @@ def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=Fals
     for i, time in enumerate(times):
 
         data = dataset[var_name].sel(time=time)
-        interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data.values * multiplicator,
+        data_filled = fill_non_finite_values(data)
+
+        try:
+            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data_filled * multiplicator,
                                                                  method='cubic')
+        except:
+            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data_filled * multiplicator,
+                                                                     method='linear')
         interpolated_functions[time] = interpolator
 
         if i < 5 and plot:
