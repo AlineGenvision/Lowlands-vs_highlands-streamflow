@@ -14,6 +14,7 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 from apollo import era5 as er
+from apollo import era5land as erland
 from apollo import hydropoint as hp
 from train_model import load_data
 
@@ -99,20 +100,17 @@ for yy in yyyy:
         rain_data = rain_data.sortby('time')
         rain_data.to_netcdf(path=(filename + '.nc'))
 
-    # Save the hourly precipitation data and aggregate daily (from midnight to midnight)
+    # USE THE ERA5-LAND method to aggregate the mean!!
     if not os.path.exists(str(rain_query['file_stem']) + '_aggregated.nc'):
-        er.aggregate_mean(str(rain_query['file_stem']) + '.nc',
+        erland.aggregate_mean(str(rain_query['file_stem']) + '.nc',
                           str(rain_query['file_stem']) + '_aggregated.nc')
 
-    # Shift the daily aggregation (from 9am to 9am)
+    # USE THE ERA5-LAND method to aggregate the mean from 9 to 9
     if not os.path.exists(filename + '_aggregated_9to9.nc'):
         print('shifting', filename)
-        er.shift_time_9am_to_9am(str(rain_query['file_stem']) + '.nc',
-                                 int(yy),
-                                 str(rain_query['file_stem']) + '_9to9.nc')
-        er.aggregate_mean(str(rain_query['file_stem']) + '_9to9.nc',
-                          str(rain_query['file_stem']) + '_aggregated_9to9.nc',
-                          shift=9)
+        erland.aggregate_mean_shift(str(rain_query['file_stem']) + '.nc',
+                                str(rain_query['file_stem']) + '_aggregated_9to9.nc',
+                                shift=9)
 
 # Combine the daily midnight-midnight precipitation (High Res)
 if not os.path.exists(paths.RAINFALL_UK_HR):
@@ -224,11 +222,12 @@ for i in range(len(db)):
                                                               reload=False)
 
     # Linear interpolation high resolution data
-    cache_HR = test.output_era5_file(domain_weather_HR, surface_data, 28,
+    if db.iloc[i,0] not in [33035, 39016]:
+        cache_HR = test.output_era5_file(domain_weather_HR, surface_data, 28,
                                   out_fp=OUT_FP,
                                   ext=EXT + '_HR',
                                   interpolation_method='linear',
-                                  reload=False)
+                                  reload=True)
 
     # Surface interpolation high resolution data
     surf_interp_cache_HR = test.output_surface_interpolated_file(domain_rain=domain_rain_HR,
@@ -236,5 +235,5 @@ for i in range(len(db)):
                                                               out_fp=OUT_FP,
                                                               ext=EXT + '_HR',
                                                               resolution=0.1,
-                                                              multiplicator=100*24,
-                                                              reload=True)
+                                                              multiplicator=1000*24,
+                                                              reload=False)

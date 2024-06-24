@@ -37,6 +37,7 @@ def calculate_slope_gradient(gdf, metadata):
 def get_characteristics_all_stations(stations_list, input_type='9to9_linear', years_eval=[2010 + i for i in range(10)]):
 
     new_data_list = []
+
     for station_nr in os.listdir(stations_list):
 
         df = pd.read_csv('../' + paths.CATCHMENT_BASINS + '/' + str(station_nr) + '/' + str(str(station_nr) + '_gdf.csv'))

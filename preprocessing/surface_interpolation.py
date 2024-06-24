@@ -113,7 +113,7 @@ def fill_non_finite_values(data):
         return data
 
 
-def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True, save_path=None):
+def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True, save_path=None, plot_nr=7998):
     '''
     Interpolates spatial data using RegularGridInterpolator for each time step in the dataset.
 
@@ -153,7 +153,6 @@ def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True
                                                                      method='linear')
         interpolated_functions[time] = interpolator
 
-        plot_nr = 7998
         if plot and i >= plot_nr and i < plot_nr+4:
             ax = axs[i-plot_nr]
             if i == plot_nr:
@@ -210,7 +209,9 @@ def plot_interpolation(x1, x2, f, ax, title, labels=True):
     x1_surface, x2_surface = np.meshgrid(np.linspace(x1.min(), x1.max(), len(x1)), np.linspace(x2.min(), x2.max(), len(x2)), indexing='ij')
 
     ax.plot_surface(x1_surface, x2_surface, evaluate_interpolator_on_grid(x1_surface, x2_surface, f),
-                    color='cadetblue', alpha=0.5)
+                    color='cadetblue',
+                    edgecolor='white',
+                    alpha=0.5)
     if labels is True:
         ax.set_xlabel('Latitude')
         ax.set_ylabel('Longitude')
@@ -306,3 +307,11 @@ def integrate_rainfall_over_polygon(polygon, interp_func, grid_resolution=0.05):
 
     rainfall_values = interp_func(inside_points)
     return np.sum(rainfall_values) / len(inside_points)
+
+
+def integrate_rainfall_safe(time, catchment_boundary, interpolated_functions, grid_resolution=0.05):
+    try:
+        interpolator = interpolated_functions[np.datetime64(time, 'ns')]
+        return integrate_rainfall_over_polygon(catchment_boundary, interpolator, grid_resolution)
+    except KeyError:
+        return np.nan

@@ -65,6 +65,8 @@ def plot_spatial_distribution(domain_data, catchment_polygon, date=(1979 ,1 ,1),
     colormap.caption = value_column
     colormap.add_to(m)
 
+    df = df.dropna()
+
     # Add grid cells to the map
     for _, row in df.iterrows():
         lat, lon = row['latitude'], row['longitude']
