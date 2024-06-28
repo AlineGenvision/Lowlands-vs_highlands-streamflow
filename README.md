@@ -1,6 +1,6 @@
 # Mres Project AI4ER
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10841513.svg)](https://doi.org/10.5281/zenodo.10841513) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![DOI](https://zenodo.org/badge/811090945.svg)](https://zenodo.org/doi/10.5281/zenodo.12581614)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Project Description
 
@@ -10,7 +10,7 @@ Snowmelt is identified as a critical factor for highland catchments, which was p
 
 This research emphasizes the need for better representations of highland catchment dynamics and addressing biases in widely used datasets like ERA5. While more accurate, localized datasets can improve model performance, they are impractical for developing a universal model applicable across diverse conditions. Developing such a universal model is crucial to improve streamflow predictions and manage water resources effectively.
 
-Please see the final report ([`assets/gtc_report_FINAL.pdf`](assets/gtc_report_FINAL.pdf)) for full details.
+Please see the final report ([`assets/mres_report.pdf`](assets/gtc_report_FINAL.pdf)) for full details.
 
 This work was carried out as part of the [Artificial Intelligence for Environmental Risks](https://ai4er-cdt.esc.cam.ac.uk/) (AI4ER) Centre for Doctoral Training Masters of Research (Mres) Project, which ran from April, 2024 to June, 2024.
 
