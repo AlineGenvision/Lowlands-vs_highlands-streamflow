@@ -4,7 +4,11 @@
 
 ## Project Description
 
-In this study, we demonstrate that machine learning techniques can predict abyssal MOC strength using only satellite-observable variables. We train a suite of models for this task using the "Estimating the Circulation and Climate of the Ocean" (ECCO) state estimate, obtaining state-of-the-art performance. We incorporate the "Australian Community Climate and Earth System Simulator Ocean Model" (ACCESS), a high-resolution numerical ocean circulation model; and observational "Rapid Climate Change-Meridional Overturning Circulation and Heatflux Array" (RAPID) data, a cross-basin sensor array that directly measures the Atlantic MOC strength. Our experiments indicate an approximately linear relationship between satellite-observable variables and abyssal MOC strength. We additionally demonstrate the utility of observational data for predicting long-range oceanic dependencies through the integration of RAPID, and show that a deep learning model is able to accurately capture latitude-invariant features for MOC strength prediction. Through these experiments, we present a methodology for predicting abyssal circulation, which will be instrumental in informing climate policy and empowering further oceanographic research. 
+Climate change significantly impacts hydrology, altering precipitation patterns, river flows, and water availability. Accurate streamflow predictions are necessary to mitigate flood risks and manage water resources. Directly measuring streamflow is challenging and resource-intensive, hence the rapid evolution of machine learning (ML) models based on measurable inputs like precipitation and temperature. This study examines the performance differences of an existing Neural Network (NN) and Gaussian Processes (GPs) between highland and lowland regions across the UK.
+
+Snowmelt is identified as a critical factor for highland catchments, which was previously unaccounted for. Other experiments reveal that model performance is fundamentally limited by the ERA5 dataset, which has notable biases and limitations, especially in highland regions. GPs underscore the importance of snowmelt and input variable significance but also face challenges in highland areas, highlighting that a model’s effectiveness is tied to data quality.
+
+This research emphasizes the need for better representations of highland catchment dynamics and addressing biases in widely used datasets like ERA5. While more accurate, localized datasets can improve model performance, they are impractical for developing a universal model applicable across diverse conditions. Developing such a universal model is crucial to improve streamflow predictions and manage water resources effectively.
 
 Please see the final report ([`assets/gtc_report_FINAL.pdf`](assets/gtc_report_FINAL.pdf)) for full details.
 
@@ -23,7 +27,7 @@ Please see the included [`DOCUMENTATION.md`](DOCUMENTATION.md) file for an overv
 
 ## Acknowledgements
 
-I would like to thank my day-to-day MRes supervisor, Robert Rouse, as well as our general project coordinator, Prof. Emily Shuckburgh. Their guidance and support were vital to the success of this project. I also extend my gratitude to the AI4ER support staff, Annabelle Scott and Adriana Dote, for providing the necessary infrastructure and support.
+I would like to thank my day-to-day MRes supervisor, Robert Rouse, for giving me the opportunity to learn so many new things in a short timeframe and for his constant encouragement and insightful feedback. I am also greatful for the general oversight provided by Prof. Emily Shuckburgh, their combined support was vital to the success of this project. Additionally, I am grateful to the AI4ER support staff, Annabelle Scott and Adriana Dote, for creating a supportive environment and providing the necessary encouragement throughout the project.
 
 -----
 
@@ -37,11 +41,13 @@ If you use the code in this repository, please consider citing it--see the [`cit
 
 ### ERA5 
 
-All the ERA data extracted can be downloaded from the Copernicus Climate Data Service.nodo repository linked in the badge directly above. To facilitate interpretation of the code in this repository, we have copied over dataset metadata--see [`DATA_README.md`](DATA_README.md). Raw ECCO data is available for download from [NASA PO.DAAC](https://podaac.jpl.nasa.gov/); see the table in `DATA_README.md` for the PO.DAAC entries that we used.
+All the ERA data extracted can be downloaded from the Copernicus Climate Data Service. The Documentation contains a table with the specific input variables used to download data from as well ERA5 as ERA5-land. This data can be obtained through the Coopernicus CDS API, https://cds.climate.copernicus.eu/. The input variables are preprocessed in the correct manner after running ‘assembly.py’ for the ERA5 data, and 'assembly_HR' for the ERA5-land data.
+
+-----
 
 ### NRFA
 
-ACCESS data was provided to us directly by colleagues at the National Oceanography Centre (NOC; Southampton, UK) and is not publicly available but may be provided upon reasonable request. Team member emails are linked above.
+The initial catchment information (shapefile with catchment boundary, elevationg etc) are downloaded from https://nrfa.ceh.ac.uk/. Also the the target river streamflow values and precipitation per catchment can be obtained from there. Similarl to the ERA5 data, this data is processed through 'assembly.py'.
 
 -----
 
