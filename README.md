@@ -1,193 +1,51 @@
-# soil-moisture-proxies
+# Mres Project AI4ER
 
-<a name="readme-top"></a>
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10841513.svg)](https://doi.org/10.5281/zenodo.10841513) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Project Description
 
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+In this study, we demonstrate that machine learning techniques can predict abyssal MOC strength using only satellite-observable variables. We train a suite of models for this task using the "Estimating the Circulation and Climate of the Ocean" (ECCO) state estimate, obtaining state-of-the-art performance. We incorporate the "Australian Community Climate and Earth System Simulator Ocean Model" (ACCESS), a high-resolution numerical ocean circulation model; and observational "Rapid Climate Change-Meridional Overturning Circulation and Heatflux Array" (RAPID) data, a cross-basin sensor array that directly measures the Atlantic MOC strength. Our experiments indicate an approximately linear relationship between satellite-observable variables and abyssal MOC strength. We additionally demonstrate the utility of observational data for predicting long-range oceanic dependencies through the integration of RAPID, and show that a deep learning model is able to accurately capture latitude-invariant features for MOC strength prediction. Through these experiments, we present a methodology for predicting abyssal circulation, which will be instrumental in informing climate policy and empowering further oceanographic research. 
 
+Please see the final report ([`assets/gtc_report_FINAL.pdf`](assets/gtc_report_FINAL.pdf)) for full details.
 
-<!-- PROJECT HEADER -->
-<br />
-<div align="center">
-  <a href="https://github.com/robert-edwin-rouse/soil-moisture-proxies">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+This work was carried out as part of the [Artificial Intelligence for Environmental Risks](https://ai4er-cdt.esc.cam.ac.uk/) (AI4ER) Centre for Doctoral Training Masters of Research (Mres) Project, which ran from April, 2024 to June, 2024.
 
-<h3 align="center">project_title</h3>
+## Documentation
 
-  <p align="center">
-    project_description
-    <br />
-    <a href="https://github.com/robert-edwin-rouse/soil-moisture-proxies"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/robert-edwin-rouse/soil-moisture-proxies/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/robert-edwin-rouse/soil-moisture-proxies/issues">Request Feature</a>
-  </p>
-</div>
+Please see the included [`DOCUMENTATION.md`](DOCUMENTATION.md) file for an overview of the repository structure. We include [tables](https://github.com/ai4er-cdt/OTP/blob/main/DOCUMENTATION.md#reproducing-report-figures-and-tables) that direct the user towards the appropriate notebook for reproducing each table and figure in the final report.
 
+-----
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+## Author
 
+<td><img src="assets/alinevd.jpg" alt="Aline Van Driessche" style="border-radius: 50%; width: 80px; height: 80px;"></td>
+<td><a href="mailto:av656@cam.ac.uk">Aline Van Driessche</a></td>
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+## Acknowledgements
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+I would like to thank my day-to-day MRes supervisor, Robert Rouse, as well as our general project coordinator, Prof. Emily Shuckburgh. Their guidance and support were vital to the success of this project. I also extend my gratitude to the AI4ER support staff, Annabelle Scott and Adriana Dote, for providing the necessary infrastructure and support.
 
-Streamflow Prediction Using Artificial Neural Networks &amp; Soil Moisture Proxies
+-----
 
-This repo contains the files necessary to reproduce the machine learning model for the paper entitled 'Streamflow Prediction Using Artificial Neural Networks &amp; Soil Moisture Proxies'; instructions, in terms of prerequisites and accessing the required data, are included below.
+## License and Citation
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+If you use the code in this repository, please consider citing it--see the [`citation.cff`](citation.cff) file or use the "Cite this repository" function on the right sidebar. All code is under the MIT license--see the [`LICENSE`](LICENSE) file.
 
+-----
 
+## Data Availability
 
-### Built With
+### ERA5 
 
-The following libraries/tools/etc. are required for this project.
+All the ERA data extracted can be downloaded from the Copernicus Climate Data Service.nodo repository linked in the badge directly above. To facilitate interpretation of the code in this repository, we have copied over dataset metadata--see [`DATA_README.md`](DATA_README.md). Raw ECCO data is available for download from [NASA PO.DAAC](https://podaac.jpl.nasa.gov/); see the table in `DATA_README.md` for the PO.DAAC entries that we used.
 
-* python3
-  * pandas
-  * numpy
-  * matplotlib
-* cdsapi
-* xarray
-* pytorch
-* scikit-learn
+### NRFA
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+ACCESS data was provided to us directly by colleagues at the National Oceanography Centre (NOC; Southampton, UK) and is not publicly available but may be provided upon reasonable request. Team member emails are linked above.
 
+-----
 
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-Placeholder.
-
-### Prerequisites
-
-Placeholder.
-
-### Installation
-
-1. Instruction [https://example.com](https://example.com)
-2. Instruction
-   ```sh
-   git clone https://github.com/robert-edwin-rouse/soil-moisture-proxies.git
-   ```
-3. Instruction
-   ```sh
-   pip install cdsapi
-   ```
-4. Instruction
-   ```py
-   def func:
-    return pass
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Add ERA5 database compiler
-- [ ] Add Changelog
-- [ ] Update Readme 
-
-See the [open issues](https://github.com/robert-edwin-rouse/soil-moisture-proxies/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are welcome.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- CONTACT -->
-## Contact
-
-Project Link: [https://github.com/robert-edwin-rouse/soil-moisture-proxies](https://github.com/robert-edwin-rouse/soil-moisture-proxies)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/robert-edwin-rouse/soil-moisture-proxies.svg?style=for-the-badge
-[contributors-url]: https://github.com/robert-edwin-rouse/soil-moisture-proxies/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/robert-edwin-rouse/soil-moisture-proxies.svg?style=for-the-badge
-[forks-url]: https://github.com/robert-edwin-rouse/soil-moisture-proxies/network/members
-[stars-shield]: https://img.shields.io/github/stars/robert-edwin-rouse/soil-moisture-proxies.svg?style=for-the-badge
-[stars-url]: https://github.com/robert-edwin-rouse/soil-moisture-proxies/stargazers
-[issues-shield]: https://img.shields.io/github/issues/robert-edwin-rouse/soil-moisture-proxies.svg?style=for-the-badge
-[issues-url]: https://github.com/robert-edwin-rouse/soil-moisture-proxies/issues
-[license-shield]: https://img.shields.io/github/license/robert-edwin-rouse/soil-moisture-proxies.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[product-screenshot]: images/screenshot.png
+<p align="middle">
+  <a href="https://ai4er-cdt.esc.cam.ac.uk/"><img src="assets/ai4er_logo.jpg" width="15%"/></a>
+  <a href="https://www.cam.ac.uk/"><img src="assets/cambridge_logo.jpg" width="56%"/></a>
+</p>

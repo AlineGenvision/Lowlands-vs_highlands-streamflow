@@ -1,10 +1,13 @@
 import pandas as pd
 import scipy
 import folium
+import rioxarray
 import numpy as np
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
+from datetime import datetime, timedelta
 from shapely.geometry import Point, Polygon
 from scipy.interpolate import griddata
 from shapely.prepared import prep
@@ -68,12 +71,13 @@ def extract_raster_to_interpolate(catchment_boundary, resolution, buffer=1):
     return lat_min, lat_max, lon_min, lon_max
 
 
-def fill_non_finite_values(data):
+def fill_non_finite_values_old(data):
     # Convert the input to a numpy array if it isn't already
     data = np.array(data)
 
     # Check for non-finite values in the data
     if not np.all(np.isfinite(data)):
+        #print('filling NaNs')
         data_filled = data.copy()
 
         # Get indices of finite and non-finite values
@@ -113,7 +117,7 @@ def fill_non_finite_values(data):
         return data
 
 
-def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True, save_path=None, plot_nr=7998):
+def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True, save_path=None, plot_date='2000-01-01'):
     '''
     Interpolates spatial data using RegularGridInterpolator for each time step in the dataset.
 
@@ -140,22 +144,35 @@ def interpolate_surface(dataset, var_name='tp', multiplicator=1000*24, plot=True
 
     fig, axs = plt.subplots(1, 4, subplot_kw={'projection': '3d'}, figsize=(14, 6))
 
-    for i, time in enumerate(times):
+    # Interpolate the missing HR (NaN) values for snow and precipitation
+
+    for i, time in enumerate(tqdm(times)):
+
+        certain_date = datetime.strptime(plot_date, '%Y-%m-%d')  # Convert string to datetime object
+        end_date = certain_date + timedelta(days=4)
 
         data = dataset[var_name].sel(time=time)
-        data_filled = fill_non_finite_values(data)
+        #data_filled = fill_non_finite_values(data)
+
+
+        nodata_value = -9999
+        data = data.rio.write_crs("EPSG:4326")
+        data.rio.write_nodata(nodata_value, inplace=True)
+        data = data.rio.interpolate_na()
+
 
         try:
-            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data_filled * multiplicator,
-                                                                 method='cubic')
+            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data.values * multiplicator,
+                                                                 method='linear')
         except:
-            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data_filled * multiplicator,
-                                                                     method='linear')
+            interpolator = scipy.interpolate.RegularGridInterpolator((lats, lons), data.values * multiplicator,
+                                                                     method='cubic')
         interpolated_functions[time] = interpolator
 
-        if plot and i >= plot_nr and i < plot_nr+4:
-            ax = axs[i-plot_nr]
-            if i == plot_nr:
+        days_difference = (pd.to_datetime(time) - certain_date).days
+        if certain_date <= pd.to_datetime(time) < end_date:
+            ax = axs[days_difference]
+            if certain_date == time:
                 plot_interpolation(lats, lons, interpolator, ax, title=f"{str(time).split('T')[0]}", labels=True)
             else:
                 plot_interpolation(lats, lons, interpolator, ax, title=f"{str(time).split('T')[0]}", labels=False)
@@ -213,12 +230,12 @@ def plot_interpolation(x1, x2, f, ax, title, labels=True):
                     edgecolor='white',
                     alpha=0.5)
     if labels is True:
-        ax.set_xlabel('Latitude')
-        ax.set_ylabel('Longitude')
+        ax.set_xlabel('Latitude', fontsize=12)
+        ax.set_ylabel('Longitude', fontsize=12)
     else:
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-    ax.set_title(title, loc='center', pad=-40)
+        ax.set_xticklabels([], fontsize=12)
+        ax.set_yticklabels([], fontsize=12)
+    ax.set_title(title, loc='center', pad=-40, fontsize=12)
 
 
 def convert_polygon(polygon, conversion_func):

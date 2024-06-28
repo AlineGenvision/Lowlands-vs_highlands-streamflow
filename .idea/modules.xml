@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/soil-moisture-proxies.iml" filepath="$PROJECT_DIR$/.idea/soil-moisture-proxies.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/lowlands_vs_highlands.iml" filepath="$PROJECT_DIR$/.idea/lowlands_vs_highlands.iml" />
     </modules>
   </component>
 </project>

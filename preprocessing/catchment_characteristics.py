@@ -49,7 +49,10 @@ def get_characteristics_all_stations(stations_list, input_type='9to9_linear', ye
         df_predictions = pd.read_csv('../' + paths.PREDICTIONS + f"/{input_type}/{station_nr}_{input_type}.csv")
         df_predictions = df_predictions.dropna(subset=['Flow', 'Predicted'])
         df_predictions = df_predictions.loc[:, ~df_predictions.columns.str.contains('^Unnamed')]
-        df_predictions['Date'] = pd.to_datetime(df_predictions['Date'], format='%Y-%m-%d %H:%M:%S').dt.normalize()
+        try:
+            df_predictions['Date'] = pd.to_datetime(df_predictions['Date'], format='%Y-%m-%d %H:%M:%S').dt.normalize()
+        except ValueError:
+            df_predictions['Date'] = pd.to_datetime(df_predictions['Date'], format='%Y-%m-%d').dt.normalize()
 
         df_test = df_predictions[df_predictions['Date'].dt.year.isin(years_eval)]
         NSE = me.R2(df_test['Flow'], df_test['Predicted'])
@@ -67,5 +70,7 @@ def get_characteristics_all_stations(stations_list, input_type='9to9_linear', ye
 
     metadata = pd.read_csv('../' + paths.DATA + '/Catchments_Database.csv')
     overview_gdf = calculate_slope_gradient(overview_gdf, metadata)
+    overview_gdf['90 percentile'] = overview_gdf['Station'].apply(
+        lambda station: metadata[metadata['Station number'] == int(station)]['90 percentile'].iloc[0])
     overview_gdf['Latitude'] = overview_gdf['Geometry'].apply(lambda geometry: calculate_latitude(geometry))
     return overview_gdf

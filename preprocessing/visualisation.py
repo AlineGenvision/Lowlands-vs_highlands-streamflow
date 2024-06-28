@@ -94,16 +94,16 @@ def plot_spatial_distribution(domain_data, catchment_polygon, date=(1979 ,1 ,1),
     return m
 
 
-def plot_centroid_interpolation(catchment_boundary, df_data, resolution):
+def plot_centroid_interpolation(catchment_boundary, df_data, resolution, labels=False):
 
     points = catchment_boundary.centroid
-    lat, lon = osg.BNG_2_latlon(points.x[0], points.y[0])
-    lat_raster = si.round_to_nearest(lat, base=resolution, buffer=0)
-    lon_raster = si.round_to_nearest(lon, max=False, base=resolution, buffer=0)
+    lat_c, lon_c = osg.BNG_2_latlon(points.x[0], points.y[0])
+    lat_raster = si.round_to_nearest(lat_c, base=resolution, buffer=0)
+    lon_raster = si.round_to_nearest(lon_c, max=False, base=resolution, buffer=0)
 
-    m = folium.Map(location=[lat, lon], zoom_start=8)
+    m = folium.Map(location=[lat_c, lon_c], zoom_start=8)
     folium.TileLayer('CartoDB Positron No Labels').add_to(m)
-    folium.Marker([lat, lon], popup='Centroid').add_to(m)
+    folium.Marker([lat_c, lon_c], popup='Centroid').add_to(m)
 
     gdf = catchment_boundary.to_crs("EPSG:4326")
     layer = folium.GeoJson(gdf, name='catchment', color='steelblue', opacity='0.95').add_to(m)
@@ -115,6 +115,26 @@ def plot_centroid_interpolation(catchment_boundary, df_data, resolution):
             color='lightgray',
             fill=False,
         ).add_to(m)
+
+    if labels is True:
+
+        offset_x = resolution * 0.15
+        offset_y = resolution * 0.35
+
+        # Add labels to the corners
+        corners = {
+            'Q11': (lat_raster + offset_x, lon_raster - offset_y),
+            'Q12': (lat_raster + offset_x, lon_raster + resolution + 0.5*offset_y),
+            'Q21': (lat_raster - resolution - offset_x, lon_raster - offset_y),
+            'Q22': (lat_raster - resolution - offset_x, lon_raster + resolution + 0.5*offset_y),
+            'P': (lat_c - offset_x, lon_c + 0.3*offset_y)
+        }
+
+        for label, (lat, lon) in corners.items():
+            folium.Marker(
+                location=[lat, lon],
+                icon=folium.DivIcon(html=f'<div style="font-size: 12px; color: black;">{label}</div>')
+            ).add_to(m)
 
     folium.Rectangle(
         bounds=[(lat_raster, lon_raster), (lat_raster - resolution, lon_raster + resolution)],
@@ -135,12 +155,12 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot
 
     fig, ax1 = plt.subplots(figsize=figsize)
     ax1.set_xlim([dt.date(year, 1, 1), dt.date(year, 12, 31)])
-    ax1.set_xlabel(year)
+    ax1.set_xlabel(year, fontweight='bold', fontsize=12)
 
     ax1.xaxis.set_major_locator(mdt.MonthLocator())
     ax1.xaxis.set_major_formatter(mdt.DateFormatter('%b'))
     ax1.set_ylim(0, 1.1*max([df[df['Date'].dt.year == year]['Rain'].max() for df in dfs_precipitation]))
-    ax1.set_ylabel('Precipitation (mm)')
+    ax1.set_ylabel('Precipitation (mm)', fontweight='bold', fontsize=12)
     ax1.yaxis.set_major_locator(mtk.MaxNLocator(5))
 
     ax1.grid(c='black', ls='dotted', lw=0.5)
@@ -150,7 +170,9 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot
 
     if plot_snow is True:
         df_snow = dfs_precipitation[0]
-        ax1.plot(df_snow['Date'],df_snow['Snow Melt'], 'orangered', lw=1.5, ls='-', label='snow melt')
+        ax1.plot(df_snow['Date'],df_snow['Snow Melt'], 'orangered', lw=2.1, ls='-', label='snow melt')
+        ax1.spines['top'].set_visible(False)
+        ax1.tick_params(axis='both', labelsize=12)
 
     if df_separate is not None:
 
@@ -158,8 +180,9 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot
             label_separate = 'Flow'
 
         ax2 = ax1.twinx()
-        ax2.set_ylabel(f"{label_separate} (m³/s)")
+        ax2.set_ylabel(f"{label_separate} (m³/s)", fontweight='bold', fontsize=12)
         ax2.set_ylim(df_separate[label_separate].max()*2,0)
+        ax2.tick_params(axis='both', labelsize=12)
 
         ax2.plot(df_separate['Date'], df_separate[label_separate], 'black', lw=1.5, ls='-', label='riverflow')
 
@@ -169,9 +192,17 @@ def compare_precipitation_and_flow(year, dfs_precipitation, colors, labels, plot
         handles += handles2
         labels += labels2
 
-        ax1.legend(handles, labels, loc='center left', bbox_to_anchor=(0.0, 0.70))
+        ax1.legend(handles, labels, loc='center left', bbox_to_anchor=(0.0, 0.70), fontsize=12)
     else:
-        ax1.legend(loc='upper left')
+        ax1.legend(loc='upper left', fontsize=12)
+
+    ax1.spines['bottom'].set_linewidth(1)
+    ax1.spines['left'].set_linewidth(1)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['bottom'].set_color('black')
+    ax1.spines['left'].set_color('black')
+    ax1.tick_params(axis='both', labelsize=12)
 
     if save_path is not None:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -207,17 +238,20 @@ def plot_hourly_rainfall(df_rain, year, month, days, save_path=None):
         for index, row in df_filtered[day:day + 1].iterrows():
             ax.plot(hours, row[1:], label=row['Date'], color='Teal')
 
-        ax.set_xlabel(f"24 Hours on {df_filtered.iloc[day]['Date']} [h]")
+        ax.set_xlabel(f"{df_filtered.iloc[day]['Date']} [h]", fontweight='bold', fontsize=12)
         ax.set_ylim(-0.2, 2.5)
         if i == 0 or i == 2:
-            ax.set_ylabel('Rainfall [mm]')
+            ax.set_ylabel('Rainfall [mm]', fontweight='bold', fontsize=12)
         else:
             ax.set_yticklabels([])
         if i == len(days) - 1:
-            ax.legend(loc='upper right')
-        ax.grid(True)
+            ax.legend(loc='upper left', fontsize=12)
+        ax.grid(True, c='grey', ls='dotted', lw=0.5)
         ax.set_xticks(hours)
         ax.set_xticklabels([str((i + 9) % 24) for i in range(24)])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.tick_params(axis='both', labelsize=12)
 
     plt.tight_layout()
     if save_path is not None:

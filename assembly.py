@@ -14,7 +14,6 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 from apollo import era5 as er
-from apollo import era5land as erland
 from apollo import hydropoint as hp
 from train_model import load_data
 
@@ -79,54 +78,6 @@ if not os.path.exists(paths.RAINFALL_HOURLY_UK_SHIFTED):
         full_rain_data.to_netcdf(path=paths.RAINFALL_HOURLY_UK_SHIFTED)
 
 
-## Download Rainfall and snowmelt from ERA5-land (higher resolution)
-for yy in yyyy:
-
-    filename = paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_' + str(yy)
-    rain_query = er.query(filename, 'reanalysis-era5-land', met[:2], area, yy, mm, dd, hh)
-
-    for m in mm:
-        filename_month = paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_' + str(yy) + '_' + str(m)
-        rain_query_month = er.query(filename_month, 'reanalysis-era5-land', met[:2],
-                                    area, yy, m, dd, hh)
-
-        if not os.path.exists(filename_month + '.nc'):
-            print('downloading ', filename_month)
-            rain_data = er.era5(rain_query_month).download()
-
-    if not os.path.exists(filename + '.nc'):
-        rain_data = xr.open_mfdataset(paths.WEATHER_UK + f"/Rainfall_0.1/Rainfall_{str(yy)}*.nc",
-                                      concat_dim='time', combine='nested')
-        rain_data = rain_data.sortby('time')
-        rain_data.to_netcdf(path=(filename + '.nc'))
-
-    # USE THE ERA5-LAND method to aggregate the mean!!
-    if not os.path.exists(str(rain_query['file_stem']) + '_aggregated.nc'):
-        erland.aggregate_mean(str(rain_query['file_stem']) + '.nc',
-                          str(rain_query['file_stem']) + '_aggregated.nc')
-
-    # USE THE ERA5-LAND method to aggregate the mean from 9 to 9
-    if not os.path.exists(filename + '_aggregated_9to9.nc'):
-        print('shifting', filename)
-        erland.aggregate_mean_shift(str(rain_query['file_stem']) + '.nc',
-                                str(rain_query['file_stem']) + '_aggregated_9to9.nc',
-                                shift=9)
-
-# Combine the daily midnight-midnight precipitation (High Res)
-if not os.path.exists(paths.RAINFALL_UK_HR):
-    full_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_*_aggregated.nc', concat_dim='time',
-                                       combine='nested')
-    full_rain_data = full_rain_data.sortby('latitude', ascending=False)
-    full_rain_data.to_netcdf(path=paths.RAINFALL_UK_HR)
-
-# Combine the daily 9 to 9 precipiptation (High Res)
-if not os.path.exists(paths.RAINFALL_UK_SHIFTED_HR):
-    full_shifted_rain_data = xr.open_mfdataset(paths.WEATHER_UK + '/Rainfall_0.1/Rainfall_*_aggregated_9to9.nc',
-                                               concat_dim='time', combine='nested')
-    full_shifted_rain_data = full_shifted_rain_data.sortby('latitude', ascending=False)
-    full_shifted_rain_data.to_netcdf(path=paths.RAINFALL_UK_SHIFTED_HR)
-
-
 ## Download Pressure data (converted to windspeed and humidity later)
 for yy in yyyy:
     filename = paths.WEATHER_UK + '/Pressure/Pressure_' + str(yy)
@@ -159,13 +110,14 @@ if not os.path.exists(paths.SOIL_MOISTURE_UK):
 domain_weather = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED,
                                     paths.PRESSURE_UK])
 surface_data = xr.open_dataset(paths.SOIL_MOISTURE_UK)
+domain_weather= domain_weather.astype(np.float32)
+surface_data = surface_data.astype(np.float32)
 
 domain_rain = xr.open_dataset(paths.RAINFALL_UK_SHIFTED)
 
 domain_rain_HR = xr.open_mfdataset(paths.RAINFALL_UK_SHIFTED_HR)
-domain_weather_HR = xr.open_mfdataset([paths.RAINFALL_UK_SHIFTED_HR,
-                                    paths.PRESSURE_UK])
 domain_rain_hourly = xr.open_mfdataset([paths.RAINFALL_HOURLY_UK_SHIFTED])
+
 db = pd.read_csv(paths.DATA + '/Catchments_Database.csv')
 
 EXT = '_9to9'
@@ -179,9 +131,6 @@ for i in range(len(db)):
     test = hp.hydrobase(db.iloc[i,0],
                         db_path + '/' + db.iloc[i,3],
                         db_path + '/' + db.iloc[i,4])
-
-    domain_weather= domain_weather.astype(np.float32)
-    surface_data = surface_data.astype(np.float32)
 
     # Normal Era5 data
     cache = test.output_era5_file(domain_weather, surface_data, 28,
@@ -220,14 +169,6 @@ for i in range(len(db)):
                                                               ext=EXT,
                                                               multiplicator=1000*24,
                                                               reload=False)
-
-    # Linear interpolation high resolution data
-    if db.iloc[i,0] not in [33035, 39016]:
-        cache_HR = test.output_era5_file(domain_weather_HR, surface_data, 28,
-                                  out_fp=OUT_FP,
-                                  ext=EXT + '_HR',
-                                  interpolation_method='linear',
-                                  reload=True)
 
     # Surface interpolation high resolution data
     surf_interp_cache_HR = test.output_surface_interpolated_file(domain_rain=domain_rain_HR,

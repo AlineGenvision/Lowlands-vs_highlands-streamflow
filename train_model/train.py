@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
-import utils as ut
+from train_model import RE_utils as ut
 import torch.nn as nn
 import matplotlib.pyplot as plt
 from apollo import metrics as me
@@ -279,7 +279,12 @@ def calculate_performance_metrics(outdf, years_to_consider, plot=True):
 
     df = outdf[outdf['Date'].dt.year.isin(years_to_consider)]
 
-    psi_RE_df = pd.DataFrame(ut.psi_distribution(outdf['Groundtruth'], 'lognorm'), columns=['psi'])
+    if 'Groundtruth' in outdf.columns:
+        groundtruth = 'Groundtruth'
+    else:
+        groundtruth = 'Flow'
+
+    psi_RE_df = pd.DataFrame(ut.psi_distribution(outdf[groundtruth], 'lognorm'), columns=['psi'])
     psi_RE_df['Date'] = outdf['Date']
     psi_RE = psi_RE_df[psi_RE_df['Date'].dt.year.isin(years_to_consider)]['psi'].squeeze()
 
